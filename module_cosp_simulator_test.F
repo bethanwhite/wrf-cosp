@@ -1,4 +1,4 @@
-MODULE module_cosp_simulator_test 
+ MODULE module_cosp_simulator_test 
 
  ! TODO: rename when working: module_cosp_wrf
  !-------------------------------------------------------------------------------------------------
@@ -44,8 +44,12 @@ MODULE module_cosp_simulator_test
  ! - Need to check whether all outputs are point-data or not (ISCCP cloud types, etc?) - how does WRF Registry handle these?
  !-------------------------------------------------------------------------------------------------
  
- ! USE THE MET OFFICE COSP SIMULATOR
+ ! USE THE COSP MODULES
+ USE mod_cosp_constants    !, ONLY: R_UNDEF, PARASOL_NREFL, i_cvcice, i_cvcliq, i_lscliq, i_lscice ! NOTE - actually want to read all constants!
+ USE mod_cosp_types
  USE mod_cosp_simulator
+ USE mod_cosp_modis_simulator
+
 
  ! USE WRF ERROR MODULE?
  !USE module_wrf_error
@@ -55,12 +59,6 @@ MODULE module_cosp_simulator_test
   use module_model_constants, ONLY: &
                                     G, &        ! gravitational acceleration
                                     R => r_d    ! dry gas constant
-
- ! USE COSP CONSTANTS:
- USE mod_cosp_constants    !, ONLY: R_UNDEF, PARASOL_NREFL, i_cvcice, i_cvcliq, i_lscliq, i_lscice ! NOTE - actually want to read all constants!
-
- ! USE COSP TYPES TO CREATE DERIVED DATA TYPES
- USE mod_cosp_types
 
  IMPLICIT NONE
 
@@ -83,41 +81,40 @@ MODULE module_cosp_simulator_test
    !------------ 1. VARIABLE DECLARATIONS: ------------------------------------------------------------------------
 
    ! INPUT VARIABLES -----------------------------------------------------------------------------------------------
-   ! TODO: check intents - these should just be (IN)?
-   LOGICAL,    INTENT(IN   )    :: specified
+   LOGICAL,INTENT(IN)    :: specified
    REAL,INTENT(INOUT), DIMENSION(ims:ime, kms:kme, jms:jme)::eradc
    REAL,INTENT(INOUT), DIMENSION(ims:ime, kms:kme, jms:jme)::eradi
    REAL,INTENT(INOUT), DIMENSION(ims:ime, kms:kme, jms:jme)::erads
    REAL,INTENT(INOUT), DIMENSION(ims:ime, kms:kme, jms:jme)::eradr
    REAL,INTENT(INOUT), DIMENSION(ims:ime, kms:kme, jms:jme)::eradg
    REAL,INTENT(INOUT), DIMENSION(ims:ime, kms:kme, jms:jme)::cldfra
-   REAL,INTENT(INOUT), DIMENSION(ims:ime, kms:kme, jms:jme)::ozonemr
-   REAL,INTENT(INOUT), DIMENSION(ims:ime,jms:jme)::u10
-   REAL,INTENT(INOUT), DIMENSION(ims:ime,jms:jme)::v10
-   REAL,INTENT(INOUT), DIMENSION(ims:ime, jms:jme)::tsk
-   REAL,INTENT(INOUT), DIMENSION(ims:ime, jms:jme)::ht
-   REAL,INTENT(INOUT), DIMENSION(ims:ime, kms:kme, jms:jme)::qv
-   REAL,INTENT(INOUT), DIMENSION(ims:ime, kms:kme, jms:jme)::qc
-   REAL,INTENT(INOUT), DIMENSION(ims:ime, kms:kme, jms:jme)::qr
-   REAL,INTENT(INOUT), DIMENSION(ims:ime, kms:kme, jms:jme)::qi
-   REAL,INTENT(INOUT), DIMENSION(ims:ime, kms:kme, jms:jme)::qs
-   REAL,INTENT(INOUT), DIMENSION(ims:ime, kms:kme, jms:jme)::qg
-   REAL,INTENT(INOUT), DIMENSION(ims:ime, kms:kme, jms:jme)::qh
-   REAL,INTENT(INOUT), DIMENSION(ims:ime, kms:kme, jms:jme)::phb
-   REAL,INTENT(INOUT), DIMENSION(ims:ime, kms:kme, jms:jme)::ph
-   REAL,INTENT(INOUT), DIMENSION(ims:ime, kms:kme, jms:jme)::pb
-   REAL,INTENT(INOUT), DIMENSION(ims:ime, kms:kme, jms:jme)::p
-   REAL,INTENT(INOUT), DIMENSION(ims:ime, jms:jme)::psfc
-   REAL,INTENT(INOUT), DIMENSION(ims:ime, kms:kme, jms:jme)::t
-   REAL,INTENT(INOUT), DIMENSION(ims:ime, jms:jme)::xland
-   REAL,INTENT(INOUT), DIMENSION(ims:ime, kms:kme, jms:jme)::taucldc
-   REAL,INTENT(INOUT), DIMENSION(ims:ime, kms:kme, jms:jme)::taucldi
-   REAL,INTENT(INOUT), DIMENSION(ims:ime, jms:jme)::emiss
-   REAL,INTENT(INOUT), DIMENSION(ims:ime, jms:jme)::coszen
-   REAL,INTENT(INOUT), DIMENSION(ims:ime, kms:kme, jms:jme)::rainncv
-   REAL,INTENT(INOUT), DIMENSION(ims:ime, kms:kme, jms:jme)::hailncv
-   REAL,INTENT(INOUT), DIMENSION(ims:ime, kms:kme, jms:jme)::snowncv
-   REAL,INTENT(INOUT), DIMENSION(ims:ime, kms:kme, jms:jme)::graupelncv
+   REAL,INTENT(IN), DIMENSION(ims:ime, kms:kme, jms:jme)::ozonemr
+   REAL,INTENT(IN), DIMENSION(ims:ime,jms:jme)::u10
+   REAL,INTENT(IN), DIMENSION(ims:ime,jms:jme)::v10
+   REAL,INTENT(IN), DIMENSION(ims:ime, jms:jme)::tsk
+   REAL,INTENT(IN), DIMENSION(ims:ime, jms:jme)::ht
+   REAL,INTENT(IN), DIMENSION(ims:ime, kms:kme, jms:jme)::qv
+   REAL,INTENT(IN), DIMENSION(ims:ime, kms:kme, jms:jme)::qc
+   REAL,INTENT(IN), DIMENSION(ims:ime, kms:kme, jms:jme)::qr
+   REAL,INTENT(IN), DIMENSION(ims:ime, kms:kme, jms:jme)::qi
+   REAL,INTENT(IN), DIMENSION(ims:ime, kms:kme, jms:jme)::qs
+   REAL,INTENT(IN), DIMENSION(ims:ime, kms:kme, jms:jme)::qg
+   REAL,INTENT(IN), DIMENSION(ims:ime, kms:kme, jms:jme)::qh
+   REAL,INTENT(IN), DIMENSION(ims:ime, kms:kme, jms:jme)::phb
+   REAL,INTENT(IN), DIMENSION(ims:ime, kms:kme, jms:jme)::ph
+   REAL,INTENT(IN), DIMENSION(ims:ime, kms:kme, jms:jme)::pb
+   REAL,INTENT(IN), DIMENSION(ims:ime, kms:kme, jms:jme)::p
+   REAL,INTENT(IN), DIMENSION(ims:ime, jms:jme)::psfc
+   REAL,INTENT(IN), DIMENSION(ims:ime, kms:kme, jms:jme)::t
+   REAL,INTENT(IN), DIMENSION(ims:ime, jms:jme)::xland
+   REAL,INTENT(IN), DIMENSION(ims:ime, kms:kme, jms:jme)::taucldc
+   REAL,INTENT(IN), DIMENSION(ims:ime, kms:kme, jms:jme)::taucldi
+   REAL,INTENT(IN), DIMENSION(ims:ime, jms:jme)::emiss
+   REAL,INTENT(IN), DIMENSION(ims:ime, jms:jme)::coszen
+   REAL,INTENT(IN), DIMENSION(ims:ime, kms:kme, jms:jme)::rainncv
+   REAL,INTENT(IN), DIMENSION(ims:ime, kms:kme, jms:jme)::hailncv
+   REAL,INTENT(IN), DIMENSION(ims:ime, kms:kme, jms:jme)::snowncv
+   REAL,INTENT(IN), DIMENSION(ims:ime, kms:kme, jms:jme)::graupelncv
 
    REAL, INTENT(IN)     :: xlat ( ims:ime, jms:jme )        ! latitudes on mass-point grid
    REAL, INTENT(IN)     :: xlong( ims:ime, jms:jme )        ! longitudes on mass-point grid
@@ -167,9 +164,7 @@ MODULE module_cosp_simulator_test
    !
    !--------------------------------------------------------------------------------------------------------------------
 
-
-   !--------- 2. WE NEED TO CALCULATE WRF TILE DIMENSIONS IN ORDER TO SET THE DIMENSIONS OF COSP INPUTS -----------------
-   !--------- THE FOLLOWING CODE FOLLOWS THE DEFINITION OF ITS, ITE, JTS, JTE FROM THE MICROPHYSICS DRIVER --------------
+   !-------- LOCAL VARIABLES -------------------------------------------------------------------------------------------
    INTEGER :: its,ite,jts,jte,ij,sz
    LOGICAL :: channel
    ! Define the size of the variables passed to COSP
@@ -180,6 +175,203 @@ MODULE module_cosp_simulator_test
    ! Number of columns
    INTEGER :: Ncolumns
 
+   !--------- SIMULATOR FLAGS - SET WHICH SIMULATORS TO RUN HERE --------------------------------------------------------
+   LOGICAL :: lradar_sim = .true.   ! Radar
+   LOGICAL :: llidar_sim = .false.   ! Lidar
+   LOGICAL :: lmodis_sim = .false.   ! MODIS
+   LOGICAL :: lmisr_sim = .false.    ! MISR
+   LOGICAL :: lisccp_sim = .false.   ! ISCCP
+   LOGICAL :: lrttov_sim = .false.   ! RRTOV
+
+   !--------- DO YOU WANT SUB-COLUMN OUTPUT ? ---------------------------------------------------------------------------
+   LOGICAL :: lfrac_out = .false.
+
+   !--------- COMPUTE STATS? --------------------------------------------------------------------------------------------
+   LOGICAL :: Lstats = .false.
+
+   !--------- OUTPUT FLAGS REQUIRED BY COSP CONFIGURATION ---------------------------------------------------------------
+   !--------- THESE ARE ALL INITIALISED TO 'FALSE', THEN WE OVERWRITE THE VALUES ACCORDING TO WHICH SIMULATORS ARE SET --
+   LOGICAL :: lalbisccp = .false.
+   LOGICAL :: latb532 = .false.
+   LOGICAL :: lboxptopisccp = .false.
+   LOGICAL :: lboxtauisccp = .false.
+   LOGICAL :: lcfad_dbze94 = .false.
+   LOGICAL :: lcfad_lidarsr532 = .false.
+   LOGICAL :: lclcalipso = .false.
+   LOGICAL :: lclhcalipso = .false.
+   LOGICAL :: lclisccp2 = .false.
+   LOGICAL :: lcllcalipso = .false.
+   LOGICAL :: lclmcalipso = .false.
+   LOGICAL :: lcltcalipso = .false.
+   LOGICAL :: lctpisccp = .false.
+   LOGICAL :: ldbze94 = .false.
+   LOGICAL :: lcltradar = .false.
+   LOGICAL :: lcltradar2 = .false.
+   LOGICAL :: ltauisccp = .false.
+   LOGICAL :: ltclisccp = .false.
+   LOGICAL :: lparasol_refl = .false.
+   LOGICAL :: lclmisr = .false.
+   LOGICAL :: lmeantbisccp = .false.
+   LOGICAL :: lmeantbclrisccp = .false.
+   LOGICAL :: lclcalipso2 = .false.
+   LOGICAL :: lcltlidarradar = .false.
+   LOGICAL :: lbeta_mol532 = .false.
+   LOGICAL :: Llongitude = .false.
+   LOGICAL :: Llatitude =.false.
+   LOGICAL :: lcltmodis = .false.
+   LOGICAL :: lclwmodis = .false.
+   LOGICAL :: lclimodis = .false.
+   LOGICAL :: lclhmodis = .false.
+   LOGICAL :: lclmmodis = .false.
+   LOGICAL :: lcllmodis = .false.
+   LOGICAL :: ltautmodis = .false.
+   LOGICAL :: ltauwmodis = .false.
+   LOGICAL :: ltauimodis = .false.
+   LOGICAL :: ltautlogmodis = .false.
+   LOGICAL :: ltauwlogmodis = .false.
+   LOGICAL :: ltauilogmodis = .false.
+   LOGICAL :: lreffclwmodis = .false.
+   LOGICAL :: lreffclimodis = .false.
+   LOGICAL :: lpctmodis = .false.
+   LOGICAL :: llwpmodis = .false.
+   LOGICAL :: liwpmodis = .false.
+   LOGICAL :: lclmodis = .false.
+   LOGICAL :: ltbrttov = .false.  !! RTTOV OUTPUT
+
+   ! NEVER USE COSP I/O! (USING WRF I/O). THIS SHOULD ALWAYS BE .FALSE.
+   LOGICAL :: Lwrite_output = .false.
+
+   ! TODO: remove the local variables that we don't actually use!
+
+   !ALLOCATABLE ARRAYS (dimensions depend on parameters we need to calculate from the WRF tile size)
+   ! (Nlevels) - these variables are ok on Nlevels only (not (Npoints, Nlevels) ) because we do not pass them directly to the COSP gridbox
+   REAL, DIMENSION(:), allocatable :: eradc1d, eradi1d, eradr1d, erads1d, eradg1d   ! droplet, ice, snow, rain, graupel effective radii
+
+   ! DATA ON HALF LEVELS FOR EACH POINT IN THE TILE
+   ! (Npoints, Nlevels)
+   REAL, DIMENSION(:,:), allocatable :: p_half1d, ght_half                             ! pressure and geopotential height on half levels
+
+   ! COLUMNS OF WRF VARIABLES FOR EACH POINT IN THE TILE
+   ! (Npoints, Nlevels)
+   REAL, DIMENSION(:,:), allocatable :: p1d, ght,                                    & ! pressure and geopotential height on full levels
+                                        t1d, rh1d, sh1d,                             & ! temp, relative humidity, specific humidity
+                                        ozonemr1d, cldfra1d,                         & ! ozone mixing ratio, cloud fraction, u- and v-wind components
+                                        taucldc1d, taucldi1d, taucld1d,              & ! cloud droplet and ice optical depths, total cloud optical depth profile
+                                        qv1d, qc1d, qr1d, qi1d, qs1d, qg1d, qh1d,    & ! water vapour and hydrometeor mass mixing ratios
+                                        rainr1d, hailr1d, snowr1d, graupelr1d,       & ! rain, hail, snow and graupel sedimentation rates
+                                        semiss                                         ! longwave cloud emissivity
+
+   ! COLUMNS OF 'CONVECTIVE' VARIABLES THAT WE DON'T HAVE (NOT USING A CONVECTION SCHEME) BUT NEED TO POPULATE FOR PASSING TO COSP
+   ! (Npoints, Nlevels)
+   REAL, DIMENSION(:,:), allocatable ::   qv_c, qc_c, qr_c, qi_c, qs_c, qg_c, qh_c,   & ! water vapour and hydrometeor mass mixing ratios, convection scheme
+                                          semiss_c,                                   & ! Cloud emissivity from convection scheme
+                                          taucld_c, cca,                              & ! cloud optical depth from convection scheme, convective cloud fraction
+                                          rainr1d_c, snowr1d_c                          ! rain and snow sedimentation fluxes from convection scheme
+
+
+   ! Array containing the effective radii of all the COSP hydrometeor types
+   ! (Npoints, Nlevels, N_Hydro); N_Hydro is read from mod_cosp_constants
+   REAL, DIMENSION(:,:,:), allocatable :: Reff
+
+   ! SURFACE VALUES: (Npoints)
+   INTEGER, DIMENSION(:), allocatable ::  sunlitbox, land       ! is gridbox sunlit? is gridbox a land point?
+   REAL, DIMENSION(:), allocatable ::     sfcp, skt, sht        ! surface pressure, temp, height
+   REAL, DIMENSION(:), allocatable ::     xlat_ij, xlong_ij     ! latitude and longitude of given point
+   REAL, DIMENSION(:), allocatable ::     u10_ij, v10_ij        ! surface u-wind and v-wind
+
+   ! Parameters for calculating relative humidity
+   REAL, PARAMETER :: pq0 = 379.90516
+   REAL, PARAMETER :: a2 = 17.2693882
+   REAL, PARAMETER :: a3 = 273.16
+   REAL, PARAMETER :: a4 = 35.86
+
+   ! COUNTING AND INDEX VARIABLES
+   INTEGER  :: i, j, k, n
+
+   ! COSP DATA TYPES
+   type(cosp_config)  :: cfg        ! Configuration options
+   type(cosp_gridbox) :: gbx        ! Gridbox input to COSP
+   type(cosp_subgrid) :: sgx        ! Subgrid inputs to COSP
+   type(cosp_sgradar) :: sgradar    ! Output from radar simulator
+   type(cosp_sglidar) :: sglidar    ! Output from lidar simulator
+   type(cosp_isccp)   :: isccp      ! Output from ISCCP simulator
+   type(cosp_modis)   :: modis      ! Output from MODIS simulator
+   type(cosp_misr)    :: misr       ! Output from MISR simulator
+   type(cosp_sghydro) :: sghydro    ! Subgrid info for hydrometeors
+   type(cosp_vgrid)   :: vgrid      ! Information on vertical grid of stats
+   type(cosp_radarstats) :: stradar ! Summary statistics from radar simulator
+   type(cosp_lidarstats) :: stlidar ! Summary statistics from lidar simulator
+   #ifdef RTTOV
+     type(cosp_rttov)   :: rttov      ! Output from RTTOV
+   #endif
+
+   ! COSP INPUT FLAGS AND PARAMETERS
+   ! TODO - do we want to read these from a namelist...? (Likewise with the configuration and simulator flags)
+
+   LOGICAL :: use_vgrid = .true.  ! Use fixed vertical grid for outputs? (if .true. then you need to define number of levels with Nlr)
+   LOGICAL :: csat_vgrid = .true. ! CloudSat vertical grid? (if .true. then the CloudSat standard grid is used for the outputs.
+   !                              !  USE_VGRID needs also be .true.)
+   INTEGER, PARAMETER ::  Npoints_it = 10000   ! Max # gridpoints to be processed in one iteration (10,000)
+   INTEGER :: Nlr = 40   ! Number of levels in statistical outputs
+   REAL, PARAMETER :: emsfc_lw = 0.99 ! longwave emissivity of surface at 10.5 microns
+   DOUBLE PRECISION :: time   ! time since start of run [days], set to 1 because running over single WRF timestep
+   DOUBLE PRECISION :: time_bnds(2) ! time boundaries - new in cosp v1.3, set following cosp_test.f90 line 121
+   REAL :: time_step, toffset_step, half_time_step
+
+   ! COSP INPUTS: RADAR
+   REAL, PARAMETER :: radar_freq = 94.0  ! CloudSat radar frequency (GHz)
+   INTEGER, PARAMETER :: surface_radar = 0 ! surface=1, spaceborne=0
+   INTEGER, PARAMETER :: use_mie_tables = 0! use a precomputed lookup table? yes=1,no=0
+   INTEGER, PARAMETER :: use_gas_abs = 1   ! include gaseous absorption? yes=1,no=0
+   INTEGER, PARAMETER :: do_ray = 0        ! calculate/output Rayleigh refl=1, not=0
+   INTEGER, PARAMETER :: melt_lay = 0      ! melting layer model off=0, on=1
+   REAL, PARAMETER :: k2 = -1           ! |K|^2, -1=use frequency dependent default
+   LOGICAL :: use_reff = .true. ! True if you want effective radius to be used by radar simulator (always used by lidar)
+   LOGICAL :: use_precipitation_fluxes = .true.  ! True if precipitation fluxes are input to the algorithm
+
+   ! COSP INPUTS: LIDAR
+   INTEGER, PARAMETER :: Nprmts_max_hydro = 12 ! Max number of parameters for hydrometeor size distributions
+   INTEGER, PARAMETER :: Naero = 1             ! Number of aerosol species (Not used)
+   INTEGER, PARAMETER :: Nprmts_max_aero = 1   ! Max number of parameters for aerosol size distributions (Not used)
+   INTEGER, PARAMETER :: lidar_ice_type = 0    ! Ice particle shape in lidar calculations (0=ice-spheres ; 1=ice-non-spherical)
+   INTEGER, PARAMETER :: overlap = 3   !  overlap type: 1=max, 2=rand, 3=max/rand
+
+   ! COSP INPUTS: ISCCP
+   INTEGER, PARAMETER :: isccp_topheight = 1
+   ! 1 = adjust top height using both a computed infrared brightness temperature and the visible optical depth to adjust cloud top pressure.
+   ! Note that this calculation is most appropriate to compare to ISCCP data during sunlit hours. 
+   ! 2 = do not adjust top height, that is cloud top pressure is the actual cloud top pressure in the model
+   ! 3 = adjust top height using only the computed infrared brightness temperature. Note that this calculation is most appropriate to compare
+   ! to ISCCP IR only algortihm (i.e. you can compare to nighttime ISCCP data with this option)
+
+   INTEGER, PARAMETER ::  isccp_topheight_direction = 2
+   ! direction for finding atmosphere pressure level with interpolated temperature equal to the radiance determined cloud-top temperature
+   ! 1 = find the *lowest* altitude (highest pressure) level with interpolated temperature equal to the radiance determined cloud-top temperature
+   ! 2 = find the *highest* altitude (lowest pressure) level with interpolated temperature equal to the radiance determined cloud-top temperature
+   ! ONLY APPLICABLE IF top_height EQUALS 1 or 3
+   ! 1 = default setting, and matches all versions of ISCCP simulator with versions numbers 3.5.1 and lower
+   ! 2 = experimental setting
+
+   ! COSP INPUTS: RRTOV
+   INTEGER, PARAMETER ::   Platform = 1    ! satellite platform
+   INTEGER, PARAMETER ::   Satellite = 15  ! satellite
+   INTEGER, PARAMETER ::   Instrument = 0  ! instrument
+   INTEGER, PARAMETER ::   Nchannels = 8   ! Number of channels to be computed
+   INTEGER, PARAMETER ::   Channels(Nchannels) = (/1,3,5,6,8,10,11,13/) !Channel numbers (please be sure that you supply Nchannels)
+   REAL, PARAMETER :: Surfem(NChannels) = (/0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0/)  ! Surface emissivity (please be sure that you supply Nchannels)
+   REAL, PARAMETER ::  ZenAng = 50.0 ! Satellite Zenith Angle
+   ! Mixing ratios of trace gases are below - taken from cosp_test.F90, units in kg/kg
+   ! Could we get any of these from the radiation code instead?
+   REAL, PARAMETER :: CO2 = 5.241e-04
+   REAL, PARAMETER :: CH4 = 9.139e-07
+   REAL, PARAMETER :: N2O = 4.665e-07
+   REAL, PARAMETER :: CO = 2.098e-07
+
+
+   !---------- END OF VARIABLE DECLARATIONS -----------------------------------------------------------------------------
+
+   !--------- 2. WE NEED TO CALCULATE WRF TILE DIMENSIONS IN ORDER TO ALLOCATE THE DIMENSIONS OF COSP INPUTS -----------------
+   !--------- THE FOLLOWING CODE FOLLOWS THE DEFINITION OF ITS, ITE, JTS, JTE FROM THE MICROPHYSICS DRIVER --------------
    channel = .FALSE.
    IF ( PRESENT ( channel_switch ) ) channel = channel_switch
 
@@ -227,69 +419,35 @@ MODULE module_cosp_simulator_test
 
    !---------- DONE CALCULATING DIMENSIONS -----------------------------------------------------------------------------
 
+   ! Calculate time offsets of each point from the value in time
+   ! If we are running COSP on each column, these parameters correctly make the timeoffset calculation later in gbx evaluate to zero!
 
-   !---------- 3. DECALRE LOCAL VARIABLES:  -----------------------------------------------------------------------------
+   time_step = dt
+   time = curr_secs
+   toffset_step  = time_step/Npoints
+   half_time_step = 0.5*time_step
+   time_bnds = (/time-half_time_step,time+half_time_step/)
 
-   !--------- SIMULATOR FLAGS - SET WHICH SIMULATORS TO RUN HERE --------------------------------------------------------
-   LOGICAL :: lradar_sim = .false.   ! Radar
-   LOGICAL :: llidar_sim = .false.   ! Lidar
-   LOGICAL :: lmodis_sim = .false.   ! MODIS
-   LOGICAL :: lmisr_sim = .false.    ! MISR
-   LOGICAL :: lisccp_sim = .false.   ! ISCCP
-   LOGICAL :: lrttov_sim = .false.   ! RRTOV
+   !---------- 3. ALLOCATE LOCAL ARRAYS --------------------------------------------------------------------------------
+   allocate( eradc1d (Nlevels), eradi1d(Nlevels), eradr1d(Nlevels), erads1d(Nlevels), eradg1d(Nlevels),         &
+             p_half1d(Npoints,Nlevels), ght_half(Npoints,Nlevels), p1d(Npoints,Nlevels), ght(Npoints,Nlevels),  &
+             t1d(Npoints,Nlevels), rh1d(Npoints,Nlevels), sh1d(Npoints,Nlevels), ozonemr1d(Npoints,Nlevels),    &
+             cldfra1d(Npoints,Nlevels), taucldc1d(Npoints,Nlevels), taucldi1d(Npoints,Nlevels),                 &
+             taucld1d(Npoints,Nlevels), qv1d(Npoints,Nlevels), qc1d(Npoints,Nlevels), qr1d(Npoints,Nlevels),    &
+             qi1d(Npoints,Nlevels), qs1d(Npoints,Nlevels), qg1d(Npoints,Nlevels), qh1d(Npoints,Nlevels),        &
+             rainr1d(Npoints,Nlevels), hailr1d(Npoints,Nlevels), snowr1d(Npoints,Nlevels),                      &
+             graupelr1d(Npoints,Nlevels), semiss(Npoints,Nlevels), qv_c(Npoints,Nlevels),                       &
+             qc_c(Npoints,Nlevels), qr_c(Npoints,Nlevels), qi_c(Npoints,Nlevels), qs_c(Npoints,Nlevels),        &
+             qg_c(Npoints,Nlevels), qh_c(Npoints,Nlevels), semiss_c(Npoints,Nlevels),                           &
+             taucld_c(Npoints,Nlevels), cca(Npoints,Nlevels), rainr1d_c(Npoints,Nlevels),                       &
+             snowr1d_c(Npoints,Nlevels), Reff(Npoints, Nlevels, N_Hydro), sunlitbox(Npoints),                   &
+             land(Npoints), sfcp(Npoints), skt(Npoints), sht(Npoints), xlat_ij(Npoints), xlong_ij(Npoints),     &
+             u10_ij(Npoints), v10_ij(Npoints)                                                                   )
 
-   !--------- DO YOU WANT SUB-COLUMN OUTPUT ? ---------------------------------------------------------------------------
-   LOGICAL :: lfrac_out = .false.
 
-   !--------- OUTPUT FLAGS REQUIRED BY COSP CONFIGURATION ---------------------------------------------------------------	
-   !--------- THESE ARE ALL INITIALISED TO 'FALSE', THEN WE OVERWRITE THE VALUES ACCORDING TO WHICH SIMULATORS ARE SET --
-   LOGICAL :: lalbisccp = .false.
-   LOGICAL :: latb532 = .false.
-   LOGICAL :: lboxptopisccp = .false.
-   LOGICAL :: lboxtauisccp = .false.
-   LOGICAL :: lcfad_dbze94 = .false.
-   LOGICAL :: lcfad_lidarsr532 = .false.
-   LOGICAL :: lclcalipso = .false.
-   LOGICAL :: lclhcalipso = .false.
-   LOGICAL :: lclisccp2 = .false.
-   LOGICAL :: lcllcalipso = .false.
-   LOGICAL :: lclmcalipso = .false.
-   LOGICAL :: lcltcalipso = .false.
-   LOGICAL :: lctpisccp = .false.
-   LOGICAL :: ldbze94 = .false.
-   LOGICAL :: lcltradar = .false.
-   LOGICAL :: lcltradar2 = .false.
-   LOGICAL :: ltauisccp = .false.
-   LOGICAL :: ltclisccp = .false.
-   LOGICAL :: lparasol_refl = .false.
-   LOGICAL :: lclmisr = .false.
-   LOGICAL :: lmeantbisccp = .false.
-   LOGICAL :: lmeantbclrisccp = .false.
-   LOGICAL :: lclcalipso2 = .false.
-   LOGICAL :: lcltlidarradar = .false.
-   LOGICAL :: lbeta_mol532 = .false.
-   LOGICAL :: Llongitude = .false.
-   LOGICAL :: Llatitude =.false.
-   LOGICAL :: lcltmodis = .false.
-   LOGICAL :: lclwmodis = .false.
-   LOGICAL :: lclimodis = .false.
-   LOGICAL :: lclhmodis = .false.
-   LOGICAL :: lclmmodis = .false.
-   LOGICAL :: lcllmodis = .false.
-   LOGICAL :: ltautmodis = .false.
-   LOGICAL :: ltauwmodis = .false.
-   LOGICAL :: ltauimodis = .false.
-   LOGICAL :: ltautlogmodis = .false.
-   LOGICAL :: ltauwlogmodis = .false.
-   LOGICAL :: ltauilogmodis = .false.
-   LOGICAL :: lreffclwmodis = .false.
-   LOGICAL :: lreffclimodis = .false.
-   LOGICAL :: lpctmodis = .false.
-   LOGICAL :: llwpmodis = .false.
-   LOGICAL :: liwpmodis = .false.
-   LOGICAL :: lclmodis = .false.
-   LOGICAL :: ltbrttov = .false.  !! RTTOV OUTPUT 
+   ! TODO: remove the local variables that we don't actually use!
 
+   !---------- 4. SET FLAGS --------------------------------------------------------------------------------------------
    ! OVERWRITE THE OUTPUT FLAGS ACCORDING TO WHICH SIMULATORS ARE TO BE RUN:
    ! RADAR SIMULATOR
    if (lradar_sim) then
@@ -331,6 +489,9 @@ MODULE module_cosp_simulator_test
       lmeantbclrisccp = .true.
    end if
 
+   ! make sure COSP radar and lidar stats are calculated
+   if ((Lradar_sim).or.(Llidar_sim).or.(Lisccp_sim)) Lstats = .true.
+
    ! MISR SIMULATOR
    if (lmisr_sim) then
       lclmisr = .true.
@@ -358,77 +519,18 @@ MODULE module_cosp_simulator_test
       lclmodis = .true.
    end if
    ! DONE SETTING OUTPUT FLAGS
-
-   ! DECLARE LOCAL VARIABLES
-   ! These variables are ok on Nlevels only (not (Npoints, Nlevels) ) because we do not pass them directly to the COSP gridbox
-   REAL, DIMENSION(Nlevels) :: eradc1d, eradi1d, eradr1d, erads1d, eradg1d   ! droplet, ice, snow, rain, graupel effective radii
-
-
-   ! DATA ON HALF LEVELS FOR EACH POINT IN THE TILE
-   REAL, DIMENSION(Npoints, Nlevels) :: p_half1d, ght_half                  ! pressure and geopotential height on half levels
-
-   ! COLUMNS OF WRF VARIABLES FOR EACH POINT IN THE TILE
-   REAL, DIMENSION(Npoints, Nlevels)   :: p1d, ght,                                    & ! pressure and geopotential height on full levels
-                                          t1d, rh1d, sh1d,                             & ! temp, relative humidity, specific humidity
-                                          ozonemr1d, cldfra1d,                         & ! ozone mixing ratio, cloud fraction, u- and v-wind components
-                                          taucldc1d, taucldi1d, taucld1d,              & ! cloud droplet and ice optical depths, total cloud optical depth profile     
-                                          qv1d, qc1d, qr1d, qi1d, qs1d, qg1d, qh1d,    & ! water vapour and hydrometeor mass mixing ratios
-                                          rainr1d, hailr1d, snowr1d, graupelr1d,       & ! rain, hail, snow and graupel sedimentation rates 
-                                          semiss                                         ! longwave cloud emissivity  
-
-
-   ! TODO: remove the local variables that we don't actually use!
-
-   ! COLUMNS OF 'CONVECTIVE' VARIABLES THAT WE DON'T HAVE (NOT USING A CONVECTION SCHEME) BUT NEED TO POPULATE FOR PASSING TO COSP
-   REAL, DIMENSION(Npoints, Nlevels) ::   qv_c, qc_c, qr_c, qi_c, qs_c, qg_c, qh_c   & ! water vapour and hydrometeor mass mixing ratios, convection scheme
-                                         ,semiss_c                                   & ! Cloud emissivity from convection scheme
-                                         ,taucld_c, cca                              & ! cloud optical depth from convection scheme, convective cloud fraction
-                                         ,rainr1d_c, hailr1d_c, snowr1d_c              ! rain, hail and snow sedimentation fluxes from convection scheme
-
-
-   ! Array containing the effective radii of all the COSP hydrometeor types
-   REAL, DIMENSION(Npoints, Nlevels, N_hydro) :: Reff
-
-
-   ! SURFACE VALUES
-   INTEGER, DIMENSION(Npoints) ::  sunlitbox, land   ! is gridbox sunlit? is gridbox a land point?
-   REAL, DIMENSION(Npoints) ::    sfcp, skt, sht     ! surface pressure, temp, height
-   REAL, DIMENSION(Npoints) :: xlat_ij, xlong_ij     ! latitude and longitude of given point
-   REAL, DIMENSION(Npoints)  :: u10_ij, v10_ij        ! surface u-winf and v-wind
  
-   ! Parameters for calculating relative humidity
-   REAL, PARAMETER :: pq0 = 379.90516
-   REAL, PARAMETER :: a2 = 17.2693882
-   REAL, PARAMETER :: a3 = 273.16
-   REAL, PARAMETER :: a4 = 35.86
 
-   ! COUNTING AND INDEX VARIABLES
-   INTEGER  :: i, j, k
-
-   ! COSP DATA TYPES
-   type(cosp_config)  :: cfg     ! Configuration options
-   type(cosp_gridbox) :: gbx     ! Gridbox information. Input for COSP
-   type(cosp_subgrid) :: sgx     ! Subgrid outputs
-   type(cosp_sgradar) :: sgradar ! Output from radar simulator
-   type(cosp_sglidar) :: sglidar ! Output from lidar simulator
-   type(cosp_isccp)   :: isccp   ! Output from ISCCP simulator
-   type(cosp_modis)   :: modis   ! Output from MODIS simulator
-   type(cosp_misr)    :: misr    ! Output from MISR simulator
-   type(cosp_vgrid)   :: vgrid   ! Information on vertical grid of stats
-   type(cosp_radarstats) :: stradar ! Summary statistics from radar simulator
-   type(cosp_lidarstats) :: stlidar ! Summary statistics from lidar simulator
-   if (lrttov_sim) then
-      type(cosp_rttov)   :: rttov   ! Output from RTTOV 
-   end if
-   !---------- END OF VARIABLE DECLARATIONS -----------------------------------------------------------------------------
-
-   !---------- 4. POPULATE COSP CONFIGURATION INPUT VARIABLE ("cfg") WITH SIMULATOR AND OUTPUT FLAGS --------------------
+   !---------- 5. POPULATE COSP CONFIGURATION INPUT VARIABLE ("cfg") WITH SIMULATOR AND OUTPUT FLAGS --------------------
+   ! NOTE: Ltoffset is missing from this list - we don't set it and don't copy it to cfg structure. Do we need it?
    cfg%Lradar_sim=lradar_sim
    cfg%Llidar_sim=llidar_sim
    cfg%Lisccp_sim=lisccp_sim
    cfg%Lmisr_sim=lmisr_sim
    cfg%Lmodis_sim=lmodis_sim
    cfg%Lrttov_sim=lrttov_sim
+   cfg%Lstats = Lstats
+   cfg%Lwrite_output = Lwrite_output
    cfg%Lalbisccp=lalbisccp
    cfg%Latb532=latb532
    cfg%Lboxptopisccp=lboxptopisccp
@@ -436,27 +538,24 @@ MODULE module_cosp_simulator_test
    cfg%Lcfaddbze94=lcfad_dbze94
    cfg%LcfadLidarsr532=lcfad_lidarsr532
    cfg%Lclcalipso=lclcalipso
+   cfg%Lclcalipso2=lclcalipso2
    cfg%Lclhcalipso=lclhcalipso
    cfg%Lclisccp=lclisccp2
    cfg%Lcllcalipso=lcllcalipso
    cfg%Lclmcalipso=lclmcalipso
    cfg%Lcltcalipso=lcltcalipso
+   cfg%Lcltlidarradar=lcltlidarradar
    cfg%Lpctisccp=lctpisccp
    cfg%Ldbze94=ldbze94
-   cfg%Lcltradar=lcltradar
-   cfg%Lcltradar2=lcltradar2
    cfg%Ltauisccp=ltauisccp
    cfg%Lcltisccp=ltclisccp
-   cfg%Llongitude=llongitude
-   cfg%Llatitude=llatitude
    cfg%LparasolRefl=lparasol_refl
-   cfg%LclMISR=lclMISR
+   cfg%LclMISR=lclmisr
    cfg%Lmeantbisccp=lmeantbisccp
    cfg%Lmeantbclrisccp=lmeantbclrisccp
-   cfg%Lclcalipso2=lclcalipso2
-   cfg%Lcltlidarradar=lcltlidarradar
    cfg%Lfracout=lfrac_out
    cfg%LlidarBetaMol532=lbeta_mol532
+   cfg%Ltbrttov=ltbrttov
    cfg%Lcltmodis=lcltmodis
    cfg%Lclwmodis=lclwmodis
    cfg%Lclimodis=lclimodis
@@ -475,100 +574,8 @@ MODULE module_cosp_simulator_test
    cfg%Llwpmodis=llwpmodis
    cfg%Liwpmodis=liwpmodis
    cfg%Lclmodis=lclmodis
-   cfg%Ltbrttov=ltbrttov
-
-   ! make sure COSP radar and lidar stats are calculated
-   if ((Lradar_sim).or.(Llidar_sim).or.(Lisccp_sim)) cfg%Lstats = .true.
-
-   cfg%Lwrite_output=.false.  !! COSP I/O not used (using WRF I/O!), so this should always be .false.
 
    !--------- END OF COSP CONFIGURATION --------------------------------------------------------------------------------
-
-   ! --------- 5. SET THE COSP INPUTS -----------------------------------------------------------------------------------
-   ! TODO - do we want to read these from a namelist...? (Likewise with the configuration and simulator flags)
-   !
-   LOGICAL :: use_vgrid = .true.  ! Use fixed vertical grid for outputs? (if .true. then you need to define number of levels with Nlr)
-   LOGICAL :: csat_vgrid = .true. ! CloudSat vertical grid? (if .true. then the CloudSat standard grid is used for the outputs.
-   !                              !  USE_VGRID needs also be .true.)
-   INTEGER, PARAMETER ::  Npoints_it = 10000   ! Max # gridpoints to be processed in one iteration (10,000)
-   INTEGER :: Nlr = 40   ! Number of levels in statistical outputs 
-   DOUBLE PRECISION, PARAMETER :: emsfc_lw = 0.99 ! longwave emissivity of surface at 10.5 microns 
-   REAL :: time   ! time since start of run [days], set to 1 because running over single WRF timestep
-   DOUBLE PRECISION :: time_bnds(2) ! time boundaries - new in cosp v1.3, set following cosp_test.f90 line 121
-   REAL :: time_step, toffset_step, half_time_step
-
-   ! COSP INPUTS: RADAR
-   REAL, PARAMETER :: radar_freq = 94.0  ! CloudSat radar frequency (GHz)
-   INTEGER, PARAMETER :: surface_radar = 0 ! surface=1, spaceborne=0
-   INTEGER, PARAMETER :: use_mie_tables = 0! use a precomputed lookup table? yes=1,no=0
-   INTEGER, PARAMETER :: use_gas_abs = 1   ! include gaseous absorption? yes=1,no=0
-   INTEGER, PARAMETER :: do_ray = 0        ! calculate/output Rayleigh refl=1, not=0
-   INTEGER, PARAMETER :: melt_lay = 0      ! melting layer model off=0, on=1
-   INTEGER, PARAMETER :: k2 = -1           ! |K|^2, -1=use frequency dependent default
-   LOGICAL :: use_reff = .true. ! True if you want effective radius to be used by radar simulator (always used by lidar)
-   LOGICAL :: use_precipitation_fluxes = .true.  ! True if precipitation fluxes are input to the algorithm    
-
-   ! COSP INPUTS: LIDAR
-   INTEGER, PARAMETER :: Nprmts_max_hydro = 12 ! Max number of parameters for hydrometeor size distributions
-   INTEGER, PARAMETER :: Naero = 1             ! Number of aerosol species (Not used)
-   INTEGER, PARAMETER :: Nprmts_max_aero = 1   ! Max number of parameters for aerosol size distributions (Not used)
-   INTEGER, PARAMETER :: lidar_ice_type = 0    ! Ice particle shape in lidar calculations (0=ice-spheres ; 1=ice-non-spherical)
-   INTEGER, PARAMETER :: overlap = 3   !  overlap type: 1=max, 2=rand, 3=max/rand    
-
-   ! COSP INPUTS: ISCCP
-   INTEGER, PARAMETER :: isccp_topheight = 1  !  1 = adjust top height using both a computed
-                       !  infrared brightness temperature and the visible
-                       !  optical depth to adjust cloud top pressure. Note
-                       !  that this calculation is most appropriate to compare
-                       !  to ISCCP data during sunlit hours.
-                       !  2 = do not adjust top height, that is cloud top
-                       !  pressure is the actual cloud top pressure
-                       !  in the model
-                       !  3 = adjust top height using only the computed
-                       !  infrared brightness temperature. Note that this
-                       !  calculation is most appropriate to compare to ISCCP
-                       !  IR only algortihm (i.e. you can compare to nighttime
-                       !  ISCCP data with this option)
-   INTEGER, PARAMETER ::  isccp_topheight_direction = 2   ! direction for finding atmosphere pressure level
-                                 ! with interpolated temperature equal to the radiance
-                                 ! determined cloud-top temperature
-                                 ! 1 = find the *lowest* altitude (highest pressure) level
-                                 ! with interpolated temperature equal to the radiance
-                                 ! determined cloud-top temperature
-                                 ! 2 = find the *highest* altitude (lowest pressure) level
-                                 ! with interpolated temperature equal to the radiance
-                                 ! determined cloud-top temperature
-                                 ! ONLY APPLICABLE IF top_height EQUALS 1 or 3
-                                 ! 1 = default setting, and matches all versions of
-                                 ! ISCCP simulator with versions numbers 3.5.1 and lower
-                                 ! 2 = experimental setting  
-   ! COSP INPUTS: RRTOV
-   INTEGER, PARAMETER ::   Platform = 1    ! satellite platform
-   INTEGER, PARAMETER ::   Satellite = 15  ! satellite
-   INTEGER, PARAMETER ::   Instrument = 0  ! instrument
-   INTEGER, PARAMETER ::   Nchannels = 8   ! Number of channels to be computed
-   INTEGER, DIMENSION(Nchannels) :: Channels
-   DOUBLE PRECISION, DIMENSION(Nchannels) :: Surfem ! Surface emissivity
-   REAL, PARAMETER ::  ZenAng = 50.0 ! Satellite Zenith Angle
-   ! Mixing ratios of trace gases are below - taken from cosp_test.F90, units in kg/kg
-   ! Could we get any of these from the radiation code instead?
-   REAL, PARAMETER :: CO2 = 5.241e-04
-   REAL, PARAMETER :: CH4 = 9.139e-07
-   REAL, PARAMETER :: N2O = 4.665e-07
-   REAL, PARAMETER :: CO = 2.098e-07
-
-   ! Populate Channels and Surfem:
-   Channels = (/1,3,5,6,8,10,11,13/)             !Channel numbers (please be sure that you supply Nchannels)
-   Surfem = (/0.0,0.0,0.0,0.0,0.0,0.0,0.0,0.0/)  ! Surface emissivity (please be sure that you supply Nchannels)
-
-   ! Calculate time offsets of each point from the value in time
-   ! If we are running COSP on each column, these parameters correctly make the timeoffset calculation later in gbx evaluate to zero!
-   time_step = dt
-   time = curr_secs
-   toffset_step  = time_step/Npoints
-   half_time_step = 0.5*time_step
-   time_bnds = (/time-half_time_step,time+half_time_step/)
-
 
    ! -------- 6. LOOP OVER THE TILE, CONSTRUCT THE COSP INPUT AND CALL THE SIMULATOR -----------------------------------
       ! LOOP OVER I, J POINTS
@@ -576,15 +583,17 @@ MODULE module_cosp_simulator_test
       do i=its,ite      ! i loop (east-west)
 
       ! CALCULATE WHETHER GRID POINT IS SUNLIT OR NOT
+      ! VARIABLE 'SUNLITBOX' HAS DIMENSIONS NPOINTS (REQUIRED FOR PASSING TO GBX), BUT WE HAVE NPOINTS = 1
+      ! THEREFORE WE CALCULATE SUNLITBOX(1)
          if ( coszen(i,j) .gt. 0.2 ) then
-               sunlitbox = 1
+               sunlitbox(1) = 1
          else
-               sunlitbox = 0
+               sunlitbox(1) = 0
          end if
 
        ! only run COSP if the gridbox is sunlit!
        ! TODO: THIS IS ONLY THE CASE FOR SOME SIMULATORS! SOME WE CAN RUN REGARDLESS...
-       if ( sunlitbox .eq. 1 ) then
+       if ( sunlitbox(1) .eq. 1 ) then
           ! OFF WE GO...!   
 
          ! INITIALISE POINT VALUES
@@ -612,9 +621,7 @@ MODULE module_cosp_simulator_test
          taucld_c(1:Npoints,kts:kte) = 0.     ! cloud optical depth
          cca(1:Npoints,kts:kte) = 0.          ! cloud fraction
          rainr1d_c(1:Npoints,kts:kte) = 0.    ! rain flux
-         hailr1d_c(1:Npoints,kts:kte) = 0.    ! hail flux 
          snowr1d_c(1:Npoints,kts:kte) = 0.    ! snow flux
-         graupelr1d_c(1:Npoints,kts:kte) = 0. ! graupel flux
          qv_c(1:Npoints,kts:kte) = 0.         ! water vapour mixing ratio
          qr_c(1:Npoints,kts:kte) = 0.         ! rain mixing ratio
          qs_c(1:Npoints,kts:kte) = 0.         ! snow mixing ratio
@@ -667,7 +674,7 @@ MODULE module_cosp_simulator_test
              ! relative humidity
              rh1d(1:Npoints,k) = ( qv(i,k,j) / ( (pq0 / psfc(i,j)) * exp( a2*( t(i,k,j) - a3) / ( t(i,k,j) - a4) ) ) )*100.
              ! check: if relative humidity is greater than 1, set it to 1!
-             IF ( rh1d(1:Npoints,k) .GT. 1. ) rh1d(k) = 1. ! BEWARE: THIS FAILS HORRIBLY IF NPOINTS NE 1!!! WE HAVE SET NPOINTS = 1, BUT WATCH OUT!
+             IF ( rh1d(1,k) .GT. 1. ) rh1d(1,k) = 1. ! BEWARE: ONLY WORKS IF NPOINTS = 1!!! WE HAVE SET NPOINTS = 1, BUT WATCH OUT!
              ! cloud optical thickness
              taucld1d(1:Npoints,k) = taucldc(i,k,j) + taucldi(i,k,j)
               ! cloud emissivity = 1-exp(-cloud optical depth)
@@ -717,15 +724,18 @@ MODULE module_cosp_simulator_test
          ! CONVERT EFFECTIVE RADII FROM MICRONS (WRF) TO METRES (WHAT COSP WANTS)
          ! NOTE: WE USE THE SAME VALUES FOR THE CONVECTIVE AND LARGE-SCALE EFFECTIVE RADII
          ! TODO: FIND OUT WHAT WRF'S FILLVALUE IS - NEED TO RESET IN REFF SINCE HAVE MULTIPLIED BY 1.e-6!
-         Reff(1:Npoints,1:Nlevels,I_LSCLIQ) = eradc1d*1.e-6  ! LSCLIQ
-         Reff(1:Npoints,1:Nlevels,I_LSCICE) = eradi1d*1.e-6  ! LSCICE
-         Reff(1:Npoints,1:Nlevels,I_LSRAIN) = eradr1d*1.e-6  ! LSRAIN
-         Reff(1:Npoints,1:Nlevels,I_LSSNOW) = erads1d*1.e-6  ! LSSNOW
-         Reff(1:Npoints,1:Nlevels,I_CVCLIQ) = eradc1d*1.e-6  ! CVCLIQ - USE SAME VALUES AS FOR LSCLIQ
-         Reff(1:Npoints,1:Nlevels,I_CVCICE) = eradi1d*1.e-6  ! CVCICE - USE SAME VALUES AS FOR LSCICE
-         Reff(1:Npoints,1:Nlevels,I_CVRAIN) = eradr1d*1.e-6  ! CVRAIN -  USE SAME VALUES AS FOR LSRAIN
-         Reff(1:Npoints,1:Nlevels,I_CVSNOW) = erads1d*1.e-6  ! CVSNOW -  USE SAME VALUES AS FOR LSSNOW
-         Reff(1:Npoints,1:Nlevels,I_LSGRPL) = eradg1d*1.e-6  ! LSGRPL     
+         ! NOTE: The following code only works for Npoints = 1, since Reff(Npoints, Nlevels, N_Hydro)
+         ! TODO: Do we need to generalise this for the case where Npoints > 1?  
+         !       Probably not if we are running COSP on each column...?
+         Reff(1,1:Nlevels,I_LSCLIQ) = eradc1d*1.e-6  ! LSCLIQ
+         Reff(1,1:Nlevels,I_LSCICE) = eradi1d*1.e-6  ! LSCICE
+         Reff(1,1:Nlevels,I_LSRAIN) = eradr1d*1.e-6  ! LSRAIN
+         Reff(1,1:Nlevels,I_LSSNOW) = erads1d*1.e-6  ! LSSNOW
+         Reff(1,1:Nlevels,I_CVCLIQ) = eradc1d*1.e-6  ! CVCLIQ - USE SAME VALUES AS FOR LSCLIQ
+         Reff(1,1:Nlevels,I_CVCICE) = eradi1d*1.e-6  ! CVCICE - USE SAME VALUES AS FOR LSCICE
+         Reff(1,1:Nlevels,I_CVRAIN) = eradr1d*1.e-6  ! CVRAIN -  USE SAME VALUES AS FOR LSRAIN
+         Reff(1,1:Nlevels,I_CVSNOW) = erads1d*1.e-6  ! CVSNOW -  USE SAME VALUES AS FOR LSSNOW
+         Reff(1,1:Nlevels,I_LSGRPL) = eradg1d*1.e-6  ! LSGRPL     
 
          !----------------------------------------------------------------------
          ! Allocate memory for gridbox type
@@ -761,7 +771,7 @@ MODULE module_cosp_simulator_test
         gbx%land = land ! landmask
         gbx%mr_ozone  = ozonemr1d ! ozone mass mixing ratio
         gbx%u_wind  = u10_ij ! surface u-wind
-        gbx%v_wind  = v10-ij ! surface v-wind
+        gbx%v_wind  = v10_ij ! surface v-wind
         gbx%sunlit  = 1 ! we already know we are only running the code if sunlitbox = 1
         gbx%mr_hydro(:,:,I_LSCLIQ) = qc1d ! mixing ratio large-scale cloud
         gbx%mr_hydro(:,:,I_LSCICE) = qi1d ! mixing ratio large-scale ice
@@ -801,19 +811,22 @@ MODULE module_cosp_simulator_test
         call construct_cosp_isccp(cfg,Npoints,Ncolumns,Nlevels,isccp)
         call construct_cosp_modis(cfg,Npoints,modis)
         call construct_cosp_misr(cfg,Npoints,misr)
-        if (lrttov_sim) then
+        call construct_cosp_sghydro(Npoints,Ncolumns,Nlevels,N_hydro,sghydro)
+        call construct_cosp_radarstats(cfg,Npoints,Ncolumns,Nlevels,N_hydro,stradar)
+        call construct_cosp_lidarstats(cfg,Npoints,Ncolumns,Nlevels,N_hydro,PARASOL_NREFL,stlidar)
+        #ifdef RTTOV
            call construct_cosp_rttov(Npoints,Nchannels,rttov)
-        end if
+        #endif
 
         !-----------------------------------------------------------------------
         ! CALL SIMULATOR
         !-----------------------------------------------------------------------
         ! TODO: DO WE CALL COSP OR cosp_simulator HERE? COSP CALLED FROM THE TEST MODULE, BUT COSP.F90 CALLS THE SIMULATOR...
-        if (lrttov_sim) then
-           call cosp_simulator(overlap,Ncolumns,cfg,vgrid,gbx,sgx,sgradar,sglidar,isccp,misr,modis,rttov,stradar,stlidar)
-        else 
-           call cosp_simulator(overlap,Ncolumns,cfg,vgrid,gbx,sgx,sgradar,sglidar,isccp,misr,modis,stradar,stlidar)
-        end if
+        #ifdef RTTOV
+           call cosp_simulator(gbx,sgx,sghydro,cfg,vgrid,sgradar,sglidar,isccp,misr,modis,rttov,stradar,stlidar)
+        #else
+           call cosp_simulator(gbx,sgx,sghydro,cfg,vgrid,sgradar,sglidar,isccp,misr,modis,stradar,stlidar)
+        #endif
 
         ! TODO: TRANSFER OUTPUT TO 3D ARRAYS AND WRITE OUTPUT TO WRF VARIABLES
         ! TODO: DEALLOCATE MEMORY IN DERIVED TYPES
@@ -833,5 +846,5 @@ MODULE module_cosp_simulator_test
 
      END DO ! tiles loop
    end subroutine wrf_cosp_simulator
-END MODULE module_cosp_simulator_test
+ END MODULE module_cosp_simulator_test
 !END MODULE module_cosp_wrf
