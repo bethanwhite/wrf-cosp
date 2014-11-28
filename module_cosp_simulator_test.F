@@ -617,54 +617,54 @@
          v10_ij(1:Npoints) = v10(i,j)     ! surface v-wind
 
          ! INITIALISE 'CONVECTIVE' VALUES (NOT USING A CONVECTION SCHEME)
-         semiss_c(1:Npoints,kts:kte) = 0.     ! cloud emissivity
-         taucld_c(1:Npoints,kts:kte) = 0.     ! cloud optical depth
-         cca(1:Npoints,kts:kte) = 0.          ! cloud fraction
-         rainr1d_c(1:Npoints,kts:kte) = 0.    ! rain flux
-         snowr1d_c(1:Npoints,kts:kte) = 0.    ! snow flux
-         qv_c(1:Npoints,kts:kte) = 0.         ! water vapour mixing ratio
-         qr_c(1:Npoints,kts:kte) = 0.         ! rain mixing ratio
-         qs_c(1:Npoints,kts:kte) = 0.         ! snow mixing ratio
-         qi_c(1:Npoints,kts:kte) = 0.         ! ice mixing ratio
-         qg_c(1:Npoints,kts:kte) = 0.         ! graupel mixing ratio
-         qh_c(1:Npoints,kts:kte) = 0.         ! hail mixing ratio 
-         qc_c(1:Npoints,kts:kte) = 0.         ! cloud liquid mixing ratio
+         semiss_c(1:Npoints,1:Nlevels) = 0.     ! cloud emissivity
+         taucld_c(1:Npoints,1:Nlevels) = 0.     ! cloud optical depth
+         cca(1:Npoints,1:Nlevels) = 0.          ! cloud fraction
+         rainr1d_c(1:Npoints,1:Nlevels) = 0.    ! rain flux
+         snowr1d_c(1:Npoints,1:Nlevels) = 0.    ! snow flux
+         qv_c(1:Npoints,1:Nlevels) = 0.         ! water vapour mixing ratio
+         qr_c(1:Npoints,1:Nlevels) = 0.         ! rain mixing ratio
+         qs_c(1:Npoints,1:Nlevels) = 0.         ! snow mixing ratio
+         qi_c(1:Npoints,1:Nlevels) = 0.         ! ice mixing ratio
+         qg_c(1:Npoints,1:Nlevels) = 0.         ! graupel mixing ratio
+         qh_c(1:Npoints,1:Nlevels) = 0.         ! hail mixing ratio 
+         qc_c(1:Npoints,1:Nlevels) = 0.         ! cloud liquid mixing ratio
       
          ! INITIALISE COLUMN PROFILES
-         p1d(1:Npoints,kts:kte) = 0.
-         ght(1:Npoints,kts:kte) = 0.
-         sh1d(1:Npoints,kts:kte) = 0.
-         rh1d(1:Npoints,kts:kte) = 0.
-         taucld1d(1:Npoints,kts:kte) = 0.
-         semiss(1:Npoints,kts:kte) = 0.
-         p_half1d(1:Npoints,kts:kte) = 0.
-         ght_half(1:Npoints,kts:kte) = 0.
-         t1d(1:Npoints,kts:kte) = 0.
-         ozonemr1d(1:Npoints,kts:kte) = 0.
-         cldfra1d(1:Npoints,kts:kte) = 0.
-         eradc1d(kts:kte) = 0.
-         eradi1d(kts:kte) = 0.
-         eradr1d(kts:kte) = 0.
-         erads1d(kts:kte) = 0.
-         eradg1d(kts:kte) = 0.
-         qv1d(1:Npoints,kts:kte) = 0.
-         qc1d(1:Npoints,kts:kte) = 0.
-         qr1d(1:Npoints,kts:kte) = 0.
-         qi1d(1:Npoints,kts:kte) = 0.
-         qs1d(1:Npoints,kts:kte) = 0.
-         qg1d(1:Npoints,kts:kte) = 0.
-         qh1d(1:Npoints,kts:kte) = 0.
-         rainr1d(1:Npoints,kts:kte) = 0.
-         hailr1d(1:Npoints,kts:kte) = 0.
-         snowr1d(1:Npoints,kts:kte) = 0.
-         graupelr1d(1:Npoints,kts:kte) = 0.
+         p1d(1:Npoints,1:Nlevels) = 0.
+         ght(1:Npoints,1:Nlevels) = 0.
+         sh1d(1:Npoints,1:Nlevels) = 0.
+         rh1d(1:Npoints,1:Nlevels) = 0.
+         taucld1d(1:Npoints,1:Nlevels) = 0.
+         semiss(1:Npoints,1:Nlevels) = 0.
+         p_half1d(1:Npoints,1:Nlevels) = 0.
+         ght_half(1:Npoints,1:Nlevels) = 0.
+         t1d(1:Npoints,1:Nlevels) = 0.
+         ozonemr1d(1:Npoints,1:Nlevels) = 0.
+         cldfra1d(1:Npoints,1:Nlevels) = 0.
+         eradc1d(1:Nlevels) = 0.
+         eradi1d(1:Nlevels) = 0.
+         eradr1d(1:Nlevels) = 0.
+         erads1d(1:Nlevels) = 0.
+         eradg1d(1:Nlevels) = 0.
+         qv1d(1:Npoints,1:Nlevels) = 0.
+         qc1d(1:Npoints,1:Nlevels) = 0.
+         qr1d(1:Npoints,1:Nlevels) = 0.
+         qi1d(1:Npoints,1:Nlevels) = 0.
+         qs1d(1:Npoints,1:Nlevels) = 0.
+         qg1d(1:Npoints,1:Nlevels) = 0.
+         qh1d(1:Npoints,1:Nlevels) = 0.
+         rainr1d(1:Npoints,1:Nlevels) = 0.
+         hailr1d(1:Npoints,1:Nlevels) = 0.
+         snowr1d(1:Npoints,1:Nlevels) = 0.
+         graupelr1d(1:Npoints,1:Nlevels) = 0.
 
          ! INITIALISE REFF
          Reff(1:Npoints, 1:Nlevels, 1:N_Hydro) = 0.
 
 
          ! CALCULATE COLUMN PROFILES THAT AREN'T NATIVE TO WRF:
-         do k = kts, kte     ! k loop (vertical)
+         do k = 1, Nlevels     ! k loop (vertical)
              ! full pressure field
              p1d(1:Npoints,k) = pb(i,k,j) + p(i,k,j)
              ! geopotential height
@@ -682,8 +682,8 @@
          end do
 
          ! LINEAR INTERPOLATION TO CALCULATE FIELDS ON HALF LEVELS:
-         do k = kts, kte     ! k loop (vertical)
-            if ( k .lt. kte ) then
+         do k = 1, Nlevels     ! k loop (vertical)
+            if ( k .lt. Nlevels ) then
               ! pressure on half levels
               p_half1d(1:Npoints,k) =  0.5*( p1d(1:Npoints,k) + p1d(1:Npoints,k+1) ) ! BEWARE: THIS FAILS HORRIBLY IF NPOINTS NE 1!!! WE HAVE SET NPOINTS = 1, BUT WATCH OUT!
               ! geopotential height on half levels 
@@ -698,7 +698,7 @@
          end do
 
          ! TRANSFER NATIVE 3D ARRAYS INTO 1D COLUMNS FOR INPUT TO COSP:
-         do k = kts, kte  
+         do k = 1, Nlevels   
             t1d(1:Npoints,k) = t(i,k,j)                 ! temp
             ozonemr1d(1:Npoints,k) = ozonemr(i,k,j)     ! ozone mixing ratio
             cldfra1d(1:Npoints,k) = cldfra(i,k,j)       ! cloud fraction
