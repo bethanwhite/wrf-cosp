@@ -828,7 +828,73 @@
            call cosp_simulator(gbx,sgx,sghydro,cfg,vgrid,sgradar,sglidar,isccp,misr,modis,stradar,stlidar)
         #endif
 
-        ! TODO: TRANSFER OUTPUT TO 3D ARRAYS AND WRITE OUTPUT TO WRF VARIABLES
+        ! TRANSFER COSP OUTPUT TO WRF VARIABLES (following cosp_io.F90)
+        ! TODO: Do we need local & global vars for these? (CHECK ERADC IMPLEMENTATION)
+        ! TODO: CHECK WHICH ARE ON NLR AND WHICH ARE ON NLEVELS!
+
+        ! 2D VARIABLES (i,j)
+        CLLCALIPSO(i,j) = stlidar%cldlayer(:,1) ! CALIPSO low level cloud fraction (profile)
+        CLMCALIPSO(i,j) = stlidar%cldlayer(:,2) ! CALIPSO mid level cloud fraction (profile)
+        CLHCALIPSO(i,j) = stlidar%cldlayer(:,3) ! CALIPSO high level cloud fraction (profile)
+        CLTCALIPSO(i,j) = stlidar%cldlayer(:,4) ! CALIPSO total cloud fraction (profile)
+        CLTLIDARRADAR(i,j) = stradar%radar_lidar_tcc ! Lidar and radar total cloud fraction
+        CLTISCCP(i,j) = isccp%totalcldarea ! ISCCP total cloud fraction
+        PCTISCCP(i,j) = isccp%meanptop ! ISCCP mean cloud top pressure
+        TAUISCCP(i,j) = isccp%meantaucld ! ISCCP mean optical depth
+        ALBISCCP(i,j) = isccp%meanalbedocld ! ISCCP mean cloud albedo
+        MEANTBCLRISCCP(i,j) = isccp%meantbclr ! ISCCP mean clear-sky brightness temp
+        MEANTBISCCP(i,j) = isccp%meantb ! ISCCP mean all-sky brightness temp
+        CLTMODIS(i,j) = modis%Cloud_Fraction_Total_Mean ! MODIS total cloud fraction
+        CLWMODIS(i,j) = modis%Cloud_Fraction_Water_Mean ! MODIS liquid cloud fraction
+        CLIMODIS(i,j) = modis%Cloud_Fraction_Ice_Mean ! MODIS ice cloud fraction
+        CLHMODIS(i,j) = modis%Cloud_Fraction_High_Mean ! MODIS high level cloud fraction
+        CLMMODIS(i,j) = modis%Cloud_Fraction_Mid_Mean ! MODIS mid level loud fraction
+        CLLMODIS(i,j) = modis%Cloud_Fraction_Low_Mean ! MODIS low level cloud fraction
+        TAUTMODIS(i,j) = modis%Optical_Thickness_Total_Mean ! MODIS total cloud optical thickness
+        TAUWMODIS(i,j) = modis%Optical_Thickness_Water_Mean ! MODIS liquid cloud optical thickness
+        TAUIMODIS(i,j) = modis%Optical_Thickness_Ice_Mean ! MODIS ice cloud optical thickness
+        TAUTLOGMODIS(i,j) = modis%Optical_Thickness_Total_LogMean ! MODIS total cloud optical thickness (log10 mean)
+        TAUWLOGMODIS(i,j) = modis%Optical_Thickness_Water_LogMean ! MODIS liquid cloud optical thickness (log10 mean)
+        TAUILOGMODIS(i,j) = modis%Optical_Thickness_Ice_LogMean ! MODIS ice cloud optical thickness (log10 mean)
+        REFFCLWMODIS(i,j) = modis%Cloud_Particle_Size_Water_Mean ! MODIS liquid cloud particle size
+        REFFCLIMODIS(i,j) = modis%Cloud_Particle_Size_Ice_Mean ! MODIS ice cloud particle size
+        PCTMODIS(i,j) = modis%Cloud_Top_Pressure_Total_Mean ! MODIS cloud top pressure
+        LWPMODIS(i,j) = modis%Liquid_Water_Path_Mean ! MODIS cloud liquid water path
+        IWPMODIS(i,j) = modis%Ice_Water_Path_Mean ! MODIS cloud ice water path
+        TOFFSET(i,j) = gbx%toffset ! time difference
+
+        ! 3D variables (i,k,j)
+        ! TODO - DIMS? Are these Nlevels or Nlr? Or different for each? And is it kms:kme here?
+        CLCALIPSO(i,kms:kme,j) = stlidar%lidarcld ! CALIPSO cloud area fraction
+        CLCALIPSO2(i,kms:kme,j) = stradar%lidar_only_freq_cloud ! CALIPSO cloud fraction undetected by CloudSat
+        LIDARBETAMOL532(i,kms:kme,j) = sglidar%beta_mol ! Lidar molecular backscatter (532 nm)
+        BOXTAUISCCP(i,kms:kme,j) = isccp%boxtau ! Optical depth in each column as calculated by ISCCP simulator
+        BOXTOPISCCP(i,kms:kme,j) = isccp%boxptop ! Cloud top pressure in each column as calculated by ISCCP simulator
+
+        ! TODO: sort out dimensions of PARASOLREFL in WRF output: is (i, j, Nrefl) - can we accommodate this?
+        !PARASOLREFL(i,j,Nrefl) = stlidar%parasolrefl ! PARASOL reflectance
+
+        #ifdef RTTOV
+           TBRTTOV(i,kms:kme,j) = rttov%tbs ! Mean clear-sky brightness temp as calculated by RRTOV
+        #endif
+
+        ! 4D variables are actually 3D: 
+        ! (Npoints, Ncolumns, Nlevels) = (i,k,j) because we have Ncolumns = 1 for WRF implementation...
+        DBZE94(i,kms:kme,j) = sgradar%Ze_tot ! CloudSat radar reflectivity
+        ATB532(i,kms:kme,j) = sglidar%beta_tot ! Lidar attenuated total backscatter (532 nm)
+        FRACOUT(i,kms:kme,j) = sg%frac_out ! Subcolumn output from SCOPS
+
+        ! TODO: sort out dimensions of CFADDBZE94: (Npoint, DBZE_BINS, Nlvgrid) - extra bins, Nlevels = subgrid levels not WRF levels?
+        !CFADDBZE94(i,1:Nlvgrid,j,DBZE_BINS) = stradar%cfad_ze
+        ! TODO: sort out dimensions of CFADLIDARSR532: (Npoints, SR_BINS Nlvgrid) - extra bins, Nlevels = subgrid levels not WRF levels?
+        !CFADLIDARSR532(i,1:Nlvgrid,j,SR_BINS) = stlidar%cfad_sr ! CALIPSO scattering ratio CFAD
+        ! TODO: sort out dims of CLISCCP and CLMODIS: (Npoints, 7,7)
+        !CLISCCP(i,j,1:7,1:7) = isccp%fq_isccp ! ISCCP cloud area fraction
+        !CLMODIS(i,j,1:7,1:7) = modis%Optical_Thickness_vs_Cloud_Top_Pressure ! MODIS cloud area fraction"
+        ! TODO: sort out dims of CLMISR: (Npoints, 7, MISR_N_CTH)
+        !CLMISR(i,j,1:7,1:MISR_N_CTH) = misr%fq_MISR ! MISR cloud fraction
+
+
         ! TODO: DEALLOCATE MEMORY IN DERIVED TYPES
 
       end if ! only run COSP if gridbox is sunlit TODO: THIS ONLY APPLIES FOR SOME OF THE SIMULATORS! SEE CAM IMPLEMENTATION
