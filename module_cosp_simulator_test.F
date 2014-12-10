@@ -865,6 +865,7 @@
 
         ! 3D variables (i,k,j)
         ! TODO - DIMS? Are these Nlevels or Nlr? Or different for each? And is it kms:kme here?
+        ! registry.dimspec: ks = 40 (constant, 40 = number of levels in statistical output)
         CLCALIPSO(i,kms:kme,j) = stlidar%lidarcld ! CALIPSO cloud area fraction
         CLCALIPSO2(i,kms:kme,j) = stradar%lidar_only_freq_cloud ! CALIPSO cloud fraction undetected by CloudSat
         LIDARBETAMOL532(i,kms:kme,j) = sglidar%beta_mol ! Lidar molecular backscatter (532 nm)
@@ -872,6 +873,7 @@
         BOXTOPISCCP(i,kms:kme,j) = isccp%boxptop ! Cloud top pressure in each column as calculated by ISCCP simulator
 
         ! TODO: sort out dimensions of PARASOLREFL in WRF output: is (i, j, Nrefl) - can we accommodate this?
+        ! dims of PARASOLREFL(i,j,pr); do (i,j,i:Nrefl)
         !PARASOLREFL(i,j,Nrefl) = stlidar%parasolrefl ! PARASOL reflectance
 
         #ifdef RTTOV
@@ -885,13 +887,17 @@
         FRACOUT(i,kms:kme,j) = sg%frac_out ! Subcolumn output from SCOPS
 
         ! TODO: sort out dimensions of CFADDBZE94: (Npoint, DBZE_BINS, Nlvgrid) - extra bins, Nlevels = subgrid levels not WRF levels?
+        ! CFADDBZE94(i,j,ks,db)
         !CFADDBZE94(i,1:Nlvgrid,j,DBZE_BINS) = stradar%cfad_ze
         ! TODO: sort out dimensions of CFADLIDARSR532: (Npoints, SR_BINS Nlvgrid) - extra bins, Nlevels = subgrid levels not WRF levels?
+        !CFADLIDARSR532(i,j,ks,db)
         !CFADLIDARSR532(i,1:Nlvgrid,j,SR_BINS) = stlidar%cfad_sr ! CALIPSO scattering ratio CFAD
         ! TODO: sort out dims of CLISCCP and CLMODIS: (Npoints, 7,7)
+        !CLISCCP(i,j,da,db); CLMODIS(i,j,da,db)
         !CLISCCP(i,j,1:7,1:7) = isccp%fq_isccp ! ISCCP cloud area fraction
         !CLMODIS(i,j,1:7,1:7) = modis%Optical_Thickness_vs_Cloud_Top_Pressure ! MODIS cloud area fraction"
         ! TODO: sort out dims of CLMISR: (Npoints, 7, MISR_N_CTH)
+        !CLMISR(i,j,d,mc)
         !CLMISR(i,j,1:7,1:MISR_N_CTH) = misr%fq_MISR ! MISR cloud fraction
 
 
