@@ -52,6 +52,7 @@
  ! - initialise all to 0
  ! - loop over the tile (its:ite), call simulator and write output
  ! - deallocate allocatable memory for the output before the tile loop re-runs
+ ! - UPDATE: kts, kte are passed in from the dynamics solver (solve_em.f) therefore ok to use
  !-------------------------------------------------------------------------------------------------
  
  ! USE THE COSP MODULES
@@ -413,43 +414,8 @@
 
    !---------- END OF VARIABLE DECLARATIONS -----------------------------------------------------------------------------
 
-   !--------- 2. WE NEED TO CALCULATE WRF TILE DIMENSIONS IN ORDER TO ALLOCATE THE DIMENSIONS OF COSP INPUTS -----------------
-   !--------- THE FOLLOWING CODE FOLLOWS THE DEFINITION OF ITS, ITE, JTS, JTE FROM THE MICROPHYSICS DRIVER --------------
-   channel = .FALSE.
-   IF ( PRESENT ( channel_switch ) ) channel = channel_switch
-
-   IF( specified ) THEN
-      sz = spec_zone
-   ELSE
-      sz = 0
-   ENDIF
-
-   #ifndef RUN_ON_GPU
-   DO ij = 1 , num_tiles
-      IF (channel) THEN
-         its = max(i_start(ij),ids)
-         ite = min(i_end(ij),ide-1)
-      ELSE
-         its = max(i_start(ij),ids+sz)
-         ite = min(i_end(ij),ide-1-sz)
-      ENDIF
-         jts = max(j_start(ij),jds+sz)
-         jte = min(j_end(ij),jde-1-sz)
-   #else
-   DO ij = 1 , 1
-      IF (channel) THEN
-         its = max(ips,ids)
-         ite = min(ipe,ide-1)
-      ELSE
-         its = max(ips,ids+sz)
-         ite = min(ipe,ide-1-sz)
-      ENDIF
-         jts = max(jps,jds+sz)
-         jte = min(jpe,jde-1-sz)
-   #endif
-
    ! CALCULATE THE NUMBER OF GRID POINTS IN THE TILE
-   ! Npoints = (jte-jts)*(ite-its) ! OK FOR CALLING COSP
+   ! Npoints = (jte-jts)*(ite-its) ! OK FOR CALLING COSP, but tricky as we have yet to determine its, ite etc...
    Npoints = 1 ! COSP is called once for each column !TODO: is this the case, or can we call it for the tile?
    ! BEWARE: CODE BELOW DEPENDS ON NPOINTS = 1 BECAUSE WE HAVE CHOSEN TO MOVE DATA ONTO THE COLUMN AND RUN COSP ONCE FOR EACH COLUMN
    ! IF YOU CHANGE NPOINTS, BE SURE TO FOLLOW THROUGH EVERYTHING ELSE CAREFULLY!
@@ -471,7 +437,8 @@
    half_time_step = 0.5*time_step
    time_bnds = (/time-half_time_step,time+half_time_step/)
 
-   !---------- 3. ALLOCATE ARRAYS --------------------------------------------------------------------------------
+
+   !---------- 2. ALLOCATE ARRAYS --------------------------------------------------------------------------------
    ! Allocate input arrays
    allocate( eradc1d (Nlevels), eradi1d(Nlevels), eradr1d(Nlevels), erads1d(Nlevels), eradg1d(Nlevels),         &
              p_half1d(Npoints,Nlevels), ght_half(Npoints,Nlevels), p1d(Npoints,Nlevels), ght(Npoints,Nlevels),  &
@@ -534,56 +501,91 @@
 
 
    ! Initialise the output arrays
-   CLLCALIPSO(ims:ime,jms:jme) = 0.
-   CLMCALIPSO(ims:ime,jms:jme) = 0.
-   CLHCALIPSO(ims:ime,jms:jme) = 0.
-   CLTCALIPSO(ims:ime,jms:jme) = 0.
-   CLTLIDARRADAR(ims:ime,jms:jme) = 0.
-   CLTISCCP(ims:ime,jms:jme) = 0.
-   PCTISCCP(ims:ime,jms:jme) = 0.
-   TAUISCCP(ims:ime,jms:jme) = 0.
-   ALBISCCP(ims:ime,jms:jme) = 0.
-   MEANTBCLRISCCP(ims:ime,jms:jme) = 0.
-   MEANTBISCCP(ims:ime,jms:jme) = 0.
-   CLTMODIS(ims:ime,jms:jme) = 0.
-   CLWMODIS(ims:ime,jms:jme) = 0.
-   CLIMODIS(ims:ime,jms:jme) = 0.
-   CLHMODIS(ims:ime,jms:jme) = 0.
-   CLMMODIS(ims:ime,jms:jme) = 0.
-   CLLMODIS(ims:ime,jms:jme) = 0.
-   TAUTMODIS(ims:ime,jms:jme) = 0.
-   TAUWMODIS(ims:ime,jms:jme) = 0.
-   TAUIMODIS(ims:ime,jms:jme) = 0.
-   TAUTLOGMODIS(ims:ime,jms:jme) = 0.
-   TAUWLOGMODIS(ims:ime,jms:jme) = 0.
-   TAUILOGMODIS(ims:ime,jms:jme) = 0.
-   REFFCLWMODIS(ims:ime,jms:jme) = 0.
-   REFFCLIMODIS(ims:ime,jms:jme) = 0.
-   PCTMODIS(ims:ime,jms:jme) = 0.
-   LWPMODIS(ims:ime,jms:jme) = 0.
-   IWPMODIS(ims:ime,jms:jme) = 0.
-   TOFFSET(ims:ime,jms:jme) = 0.
-   BOXTAUISCCP(ims:ime,jms:jme) = 0.
-   BOXTOPISCCP(ims:ime,jms:jme) = 0.
-   CLCALIPSO(ims:ime,1:Nlr,jme:jme) = 0.
-   CLCALIPSO2(ims:ime,1:Nlr,jme:jme) = 0.
-   LIDARBETAMOL532(ims:ime,1:Nlevels,jme:jme) = 0.
-   LIDARBETAMOL532(ims:ime,1:Nlevels,jme:jme) = 0.
-   PARASOLREFL(ims:ime,jms:jme,1:PARASOL_NREFL) = 0.
+   COSP_CLLCALIPSO(ims:ime,jms:jme) = 0.
+   COSP_CLMCALIPSO(ims:ime,jms:jme) = 0.
+   COSP_CLHCALIPSO(ims:ime,jms:jme) = 0.
+   COSP_CLTCALIPSO(ims:ime,jms:jme) = 0.
+   COSP_CLTLIDARRADAR(ims:ime,jms:jme) = 0.
+   COSP_CLTISCCP(ims:ime,jms:jme) = 0.
+   COSP_PCTISCCP(ims:ime,jms:jme) = 0.
+   COSP_TAUISCCP(ims:ime,jms:jme) = 0.
+   COSP_ALBISCCP(ims:ime,jms:jme) = 0.
+   COSP_MEANTBCLRISCCP(ims:ime,jms:jme) = 0.
+   COSP_MEANTBISCCP(ims:ime,jms:jme) = 0.
+   COSP_CLTMODIS(ims:ime,jms:jme) = 0.
+   COSP_CLWMODIS(ims:ime,jms:jme) = 0.
+   COSP_CLIMODIS(ims:ime,jms:jme) = 0.
+   COSP_CLHMODIS(ims:ime,jms:jme) = 0.
+   COSP_CLMMODIS(ims:ime,jms:jme) = 0.
+   COSP_CLLMODIS(ims:ime,jms:jme) = 0.
+   COSP_TAUTMODIS(ims:ime,jms:jme) = 0.
+   COSP_TAUWMODIS(ims:ime,jms:jme) = 0.
+   COSP_TAUIMODIS(ims:ime,jms:jme) = 0.
+   COSP_TAUTLOGMODIS(ims:ime,jms:jme) = 0.
+   COSP_TAUWLOGMODIS(ims:ime,jms:jme) = 0.
+   COSP_TAUILOGMODIS(ims:ime,jms:jme) = 0.
+   COSP_REFFCLWMODIS(ims:ime,jms:jme) = 0.
+   COSP_REFFCLIMODIS(ims:ime,jms:jme) = 0.
+   COSP_PCTMODIS(ims:ime,jms:jme) = 0.
+   COSP_LWPMODIS(ims:ime,jms:jme) = 0.
+   COSP_IWPMODIS(ims:ime,jms:jme) = 0.
+   COSP_TOFFSET(ims:ime,jms:jme) = 0.
+   COSP_BOXTAUISCCP(ims:ime,jms:jme) = 0.
+   COSP_BOXTOPISCCP(ims:ime,jms:jme) = 0.
+   COSP_CLCALIPSO(ims:ime,1:Nlr,jme:jme) = 0.
+   COSP_CLCALIPSO2(ims:ime,1:Nlr,jme:jme) = 0.
+   COSP_LIDARBETAMOL532(ims:ime,1:Nlevels,jme:jme) = 0.
+   COSP_LIDARBETAMOL532(ims:ime,1:Nlevels,jme:jme) = 0.
+   COSP_PARASOLREFL(ims:ime,jms:jme,1:PARASOL_NREFL) = 0.
    #ifdef RTTOV
-   TBRTTOV(ims:ime,jms:jme,1:Nchannels) = 0.
+   COSP_TBRTTOV(ims:ime,jms:jme,1:Nchannels) = 0.
    #endif
-   DBZE94(ims:ime,1:Nlevels,jme:jme) = 0.
-   ATB532(ims:ime,1:Nlevels,jme:jme) = 0.
-   FRACOUT(ims:ime,1:Nlevels,jme:jme) = 0.
-   CFADDBZE94(ims:ime,1:Nlr,jme:jme,1:DBZE_BINS) = 0.
-   CFADLIDARSR532(ims:ime,1:Nlr,jme:jme,1:SR_BINS) = 0.
-   CLISCCP(ims:ime,jms:jme,1:7,1:7) = 0.
-   CLMODIS(ims:ime,jms:jme,1:7,1:7) = 0.
-   CLMISR(ims:ime,jms:jme,1:7,1:MISR_N_CTH) = 0.
+   COSP_DBZE94(ims:ime,1:Nlevels,jme:jme) = 0.
+   COSP_ATB532(ims:ime,1:Nlevels,jme:jme) = 0.
+   COSP_FRACOUT(ims:ime,1:Nlevels,jme:jme) = 0.
+   COSP_CFADDBZE94(ims:ime,1:Nlr,jme:jme,1:DBZE_BINS) = 0.
+   COSP_CFADLIDARSR532(ims:ime,1:Nlr,jme:jme,1:SR_BINS) = 0.
+   COSP_CLISCCP(ims:ime,jms:jme,1:7,1:7) = 0.
+   COSP_CLMODIS(ims:ime,jms:jme,1:7,1:7) = 0.
+   COSP_CLMISR(ims:ime,jms:jme,1:7,1:MISR_N_CTH) = 0.
 
 
    ! TODO: remove any local input variables that we don't actually use!
+
+   !--------- 3. WE NEED TO CALCULATE WRF TILE DIMENSIONS IN ORDER TO ALLOCATE THE DIMENSIONS OF COSP INPUTS -----------------
+   !--------- THE FOLLOWING CODE FOLLOWS THE DEFINITION OF ITS, ITE, JTS, JTE FROM THE MICROPHYSICS DRIVER --------------
+   channel = .FALSE.
+  IF ( PRESENT ( channel_switch ) ) channel = channel_switch
+
+  IF( specified ) THEN
+   sz = spec_zone
+  ELSE
+   sz = 0
+  ENDIF
+
+ #ifndef RUN_ON_GPU
+   DO ij = 1 , num_tiles
+     IF (channel) THEN
+      its = max(i_start(ij),ids)
+      ite = min(i_end(ij),ide-1)
+     ELSE
+      its = max(i_start(ij),ids+sz)
+      ite = min(i_end(ij),ide-1-sz)
+     ENDIF
+    jts = max(j_start(ij),jds+sz)
+    jte = min(j_end(ij),jde-1-sz)
+  #else
+  DO ij = 1 , 1
+   IF (channel) THEN
+    its = max(ips,ids)
+    ite = min(ipe,ide-1)
+   ELSE
+    its = max(ips,ids+sz)
+    ite = min(ipe,ide-1-sz)
+  ENDIF
+  jts = max(jps,jds+sz)
+  jte = min(jpe,jde-1-sz)
+ #endif
 
    !---------- 4. SET FLAGS --------------------------------------------------------------------------------------------
    ! OVERWRITE THE OUTPUT FLAGS ACCORDING TO WHICH SIMULATORS ARE TO BE RUN:
@@ -966,10 +968,10 @@
         #endif
 
         ! TRANSFER COSP OUTPUT TO WRF VARIABLES (following cosp_io.F90)
-        ! TODO: Do we need local & global vars for these? (CHECK ERADC IMPLEMENTATION)
         ! NEED TO BE CAREFUL WITH DIMENSIONS HERE! Lots of arrays are multi-dimensional so for writing COSP output
         ! we have to make sure we have added the correct dimensions to registry.dimspec, then specified the size of 
-        ! the output array in the relevant Registry file, as well as taking care of the dimensions locally.
+        ! the output array in the relevant Registry file, as well as taking care of the dimensions locally and in the 
+        ! call to this code from the solver.
 
         ! 2D VARIABLES (i,j)
         COSP_CLLCALIPSO(i,j) = stlidar%cldlayer(:,1) ! CALIPSO low level cloud fraction (profile)
@@ -1062,9 +1064,6 @@
       ! eradr(ims:ime, kms:kme, jms:jme)=-15
       ! eradg(ims:ime, kms:kme, jms:jme)=-15
       ! cldfra(ims:ime, kms:kme, jms:jme)=-15
-
-      ! TODO: deallocate arrays before looping over the next tile
-
 
      END DO ! tiles loop
    end subroutine wrf_cosp_simulator

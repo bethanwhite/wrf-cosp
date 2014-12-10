@@ -4066,7 +4066,54 @@ BENCH_END(bc_2d_tim)
       &             ,KTS=k_start, KTE=min(k_end,kde-1)                     &
       &             ,NUM_TILES=grid%num_tiles, SPEC_ZONE=grid%spec_zone    &
       &             ,CHANNEL_SWITCH=channel_bdy                            &
-      &             ,DT=grid%dt, CURR_SECS=curr_secs )
+      &             ,DT=grid%dt, CURR_SECS=curr_secs                       &
+      &             ,COSP_CLLCALIPSO=grid%COSP_CLLCALIPSO                  &
+      &             ,COSP_CLMCALIPSO                                       &
+      &             ,COSP_CLHCALIPSO=grid%COSP_CLHCALIPSO                  &
+      &             ,COSP_CLTCALIPSO=grid%COSP_CLTCALIPSO                  &
+      &             ,COSP_CLTLIDARRADAR=grid%COSP_CLTLIDARRADAR            &
+      &             ,COSP_CLTISCCP=grid%COSP_CLTISCCP                      &
+      &             ,COSP_PCTISCCP=grid%COSP_PCTISCCP                      &
+      &             ,COSP_TAUISCCP=grid%COSP_TAUISCCP                      &
+      &             ,COSP_ALBISCCP=grid%COSP_ALBISCCP                      &
+      &             ,COSP_MEANTBCLRISCCP=grid%COSP_MEANTBCLRISCCP          &
+      &             ,COSP_MEANTBISCCP=grid%COSP_MEANTBISCCP                &
+      &             ,COSP_CLTMODIS=grid%COSP_CLTMODIS                      &
+      &             ,COSP_CLWMODIS=grid%COSP_CLWMODIS                      &
+      &             ,COSP_CLIMODIS=grid%COSP_CLIMODIS                      &
+      &             ,COSP_CLHMODIS=grid%COSP_CLHMODIS                      &
+      &             ,COSP_CLMMODIS=grid%COSP_CLMMODIS                      &
+      &             ,COSP_CLLMODIS=grid%COSP_CLLMODIS                      &
+      &             ,COSP_TAUTMODIS=grid%COSP_TAUTMODIS                    &
+      &             ,COSP_TAUWMODIS=grid%COSP_TAUWMODIS                    &
+      &             ,COSP_TAUIMODIS=grid%COSP_TAUIMODIS                    &
+      &             ,COSP_TAUTLOGMODIS=grid%COSP_TAUTLOGMODIS              &
+      &             ,COSP_TAUWLOGMODIS=grid%COSP_TAUWLOGMODIS              &
+      &             ,COSP_TAUILOGMODIS=grid%COSP_TAUILOGMODIS              &
+      &             ,COSP_REFFCLWMODIS=grid%COSP_REFFCLWMODIS              &
+      &             ,COSP_REFFCLIMODIS=grid%COSP_REFFCLIMODIS              &
+      &             ,COSP_PCTMODIS=grid%COSP_PCTMODIS                      &
+      &             ,COSP_LWPMODIS=grid%COSP_LWPMODIS                      &
+      &             ,COSP_IWPMODIS=grid%COSP_IWPMODIS                      &
+      &             ,COSP_TOFFSET=grid%COSP_TOFFSET                        &
+      &             ,COSP_BOXTAUISCCP=grid%COSP_BOXTAUISCCP                &
+      &             ,COSP_BOXTOPISCCP=grid%COSP_BOXTOPISCCP                &
+      &             ,COSP_CLCALIPSO=grid%COSP_CLCALIPSO                    &
+      &             ,COSP_CLCALIPSO2=grid%COSP_CLCALIPSO2                  &
+      &             ,COSP_LIDARBETAMOL532=grid%COSP_LIDARBETAMOL532        &
+      &             ,COSP_LIDARBETAMOL532=grid%COSP_LIDARBETAMOL532        &
+      &             ,COSP_PARASOLREFL=grid%COSP_PARASOLREFL                &
+      &             ,COSP_TBRTTOV=grid%COSP_TBRTTOV                        &
+      &             ,COSP_DBZE94=grid%COSP_DBZE94                          &
+      &             ,COSP_ATB532=grid%COSP_ATB532                          &
+      &             ,COSP_FRACOUT=grid%COSP_FRACOUT                        &
+      &             ,COSP_CFADDBZE94=grid%COSP_CFADDBZE94                  &
+      &             ,COSP_CFADLIDARSR532=grid%COSP_CFADLIDARSR532          &
+      &             ,COSP_CLISCCP=grid%COSP_CLISCCP                        &
+      &             ,COSP_CLMODIS=grid%COSP_CLMODIS                        &
+      &             ,COSP_CLMISR=grid%COSP_CLMISR                          )
+
+
 
    IF (config_flags%output_diagnostics == 1) THEN
      IF ((config_flags%auxhist3_interval == 0 ) ) THEN
