@@ -11,13 +11,14 @@ ifdef DA_CORE=0
 dimspec    j       3     standard_domain                   y     south_north
 dimspec    k       2     standard_domain                   z     bottom_top
 # extra dims for WRF-COSP
-dimspec    ks      4     constant=40                       c     num_stat_levs
-dimspec    pr      3     constant=5                        c     num_parasol_reflectors
-dimspec    db      4     constant=15                       c     num_dbze_bins
-dimspec    sr      4     constant=15                       c     num_sr_bins
-dimspec    mc      4     constant=16                       c     num_misr
-dimspec    da      3     constant=7                        c     d1
-dimspec    db      4     constant=7                        c     d2 
+dimspec    l       4     constant=40                       c     num_stat_levs
+dimspec    p       3     constant=5                        c     num_parasol_reflectors
+dimspec    b       4     constant=15                       c     num_dbze_bins
+dimspec    s       4     constant=15                       c     num_sr_bins
+dimspec    m       4     constant=16                       c     num_misr
+dimspec    n       3     constant=8                        c     num_channels
+dimspec    d       3     constant=7                        c     d1
+dimspec    e       4     constant=7                        c     d2 
 endif
 
 ifdef DA_CORE=1

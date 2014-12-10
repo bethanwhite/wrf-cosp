@@ -42,6 +42,16 @@
  ! - Check all REALS are set to dp (currently not assigned)
  ! - COSP simulator is currently called from each k-point in the tile - I don't know how this works
  ! - Need to check whether all outputs are point-data or not (ISCCP cloud types, etc?) - how does WRF Registry handle these?
+ !
+ ! 
+ ! - STRUCTURE OF OUTPUTS:
+ ! - pass as array to subroutine
+ ! - declare as allocatable - because we need to calculate some dimensions (even though these are set in the Registry
+ !   for writing out, I don't think we can access that information from here...
+ ! - allocate: PROBLEMS HERE! allocate tile dims or memory dims? local or global? where do we calculate kts:kte? etc (see code)
+ ! - initialise all to 0
+ ! - loop over the tile (its:ite), call simulator and write output
+ ! - deallocate allocatable memory for the output before the tile loop re-runs
  !-------------------------------------------------------------------------------------------------
  
  ! USE THE COSP MODULES
@@ -76,7 +86,24 @@
                       ,ips,ipe, jps,jpe, kps,kpe                         &
                       ,i_start,i_end,j_start,j_end,kts,kte               &
                       ,num_tiles, spec_zone, channel_switch              &
-                      ,dt, curr_secs)              
+                      ,dt, curr_secs                                     &
+                      ,COSP_CLLCALIPSO, COSP_CLMCALIPSO, COSP_CLHCALIPSO       & ! COSP OUTPUTS
+                      ,COSP_CLTCALIPSO, COSP_CLTLIDARRADAR, COSP_CLTISCCP      &
+                      ,COSP_PCTISCCP, COSP_TAUISCCP, COSP_ALBISCCP             &
+                      ,COSP_MEANTBCLRISCCP, COSP_MEANTBISCCP, COSP_CLTMODIS    &
+                      ,COSP_CLWMODIS, COSP_CLIMODIS, COSP_CLHMODIS             &
+                      ,COSP_CLMMODIS, COSP_CLLMODIS, COSP_TAUTMODIS            &
+                      ,COSP_TAUWMODIS, COSP_TAUIMODIS, COSP_TAUTLOGMODIS       &
+                      ,COSP_TAUWLOGMODIS, COSP_TAUILOGMODIS, COSP_REFFCLWMODIS &
+                      ,COSP_REFFCLIMODIS, COSP_PCTMODIS, COSP_LWPMODIS         &
+                      ,COSP_IWPMODIS, COSP_TOFFSET, COSP_BOXTAUISCCP           &
+                      ,COSP_BOXTOPISCCP, COSP_CLCALIPSO, COSP_CLCALIPSO2       &
+                      ,COSP_LIDARBETAMOL532, COSP_LIDARBETAMOL532              &
+                      ,COSP_PARASOLREFL, COSP_TBRTTOV, COSP_DBZE94             &
+                      ,COSP_ATB532, COSP_FRACOUT, COSP_CFADDBZE94              &
+                      ,COSP_CFADLIDARSR532, COSP_CLISCCP, COSP_CLMODIS         &
+                      ,COSP_CLMISR                                             )
+
 
    !------------ 1. VARIABLE DECLARATIONS: ------------------------------------------------------------------------
 
@@ -160,8 +187,25 @@
    ! curr_secs - current forecast time (in seconds)
 
    ! OUTPUT VARIABLES -------------------------------------------------------------------------------------------------
-   ! Output variable declarations go in here
-   !
+   ! COSP OUTPUT ARRAYS, 2D
+   REAL, DIMENSION(:,:), allocatable ::  COSP_CLLCALIPSO, COSP_CLMCALIPSO, COSP_CLHCALIPSO &
+       ,COSP_CLTCALIPSO, COSP_CLTLIDARRADAR, COSP_CLTISCCP, COSP_PCTISCCP, COSP_TAUISCCP   &
+       ,COSP_ALBISCCP, COSP_MEANTBCLRISCCP, COSP_MEANTBISCCP, COSP_CLTMODIS, COSP_CLWMODIS &
+       ,COSP_CLIMODIS, COSP_CLHMODIS, COSP_CLMMODIS, COSP_CLLMODIS, COSP_TAUTMODIS         &
+       ,COSP_TAUWMODIS, COSP_TAUIMODIS, COSP_TAUTLOGMODIS, COSP_TAUWLOGMODIS               &
+       ,COSP_TAUILOGMODIS, COSP_REFFCLWMODIS, COSP_REFFCLIMODIS, COSP_PCTMODIS             &
+       ,COSP_LWPMODIS, COSP_IWPMODIS, COSP_TOFFSET, COSP_BOXTAUISCCP, COSP_BOXTOPISCCP
+   ! LOCAL COSP OUTPUT ARRAYS, 3D
+   REAL, DIMENSION(:,:,:), allocatable ::  COSP_CLCALIPSO, COSP_CLCALIPSO2                 &
+       ,COSP_LIDARBETAMOL532, COSP_LIDARBETAMOL532, COSP_PARASOLREFL,DBZE94, COSP_ATB532   &
+       ,COSP_FRACOUT
+   #ifdef RTTOV 
+   REAL, DIMENSION(:,:,:), allocatable :: COSP_TBRTTOV
+   #endif
+
+   ! LOCAL COSP OUTPUT ARRAYS, 4D
+   REAL, DIMENSION(:,:,:,:), allocatable ::  COSP_CFADDBZE94, COSP_CFADLIDARSR532          &
+       ,COSP_CLISCCP, COSP_CLMODIS, COSP_CLMISR
    !--------------------------------------------------------------------------------------------------------------------
 
    !-------- LOCAL VARIABLES -------------------------------------------------------------------------------------------
@@ -367,7 +411,6 @@
    REAL, PARAMETER :: N2O = 4.665e-07
    REAL, PARAMETER :: CO = 2.098e-07
 
-
    !---------- END OF VARIABLE DECLARATIONS -----------------------------------------------------------------------------
 
    !--------- 2. WE NEED TO CALCULATE WRF TILE DIMENSIONS IN ORDER TO ALLOCATE THE DIMENSIONS OF COSP INPUTS -----------------
@@ -428,7 +471,8 @@
    half_time_step = 0.5*time_step
    time_bnds = (/time-half_time_step,time+half_time_step/)
 
-   !---------- 3. ALLOCATE LOCAL ARRAYS --------------------------------------------------------------------------------
+   !---------- 3. ALLOCATE ARRAYS --------------------------------------------------------------------------------
+   ! Allocate input arrays
    allocate( eradc1d (Nlevels), eradi1d(Nlevels), eradr1d(Nlevels), erads1d(Nlevels), eradg1d(Nlevels),         &
              p_half1d(Npoints,Nlevels), ght_half(Npoints,Nlevels), p1d(Npoints,Nlevels), ght(Npoints,Nlevels),  &
              t1d(Npoints,Nlevels), rh1d(Npoints,Nlevels), sh1d(Npoints,Nlevels), ozonemr1d(Npoints,Nlevels),    &
@@ -444,8 +488,102 @@
              land(Npoints), sfcp(Npoints), skt(Npoints), sht(Npoints), xlat_ij(Npoints), xlong_ij(Npoints),     &
              u10_ij(Npoints), v10_ij(Npoints)                                                                   )
 
+   ! Allocate 2D output arrays
+   ! TODO: THIS IS WITHIN THE TILES LOOP, SO LOCAL DECLARATION IN TILES LOOP
+   ! NEEDS TO BE ON TILE DIMS. THEN WE'LL HAVE TO WRITE TO A GLOBAL VARIABLE
+   ! HOW DO WE DEAL WITH NOT KNOWING THE TILE DIMENSIONS?
+   ! ACTUALLY, WE COULD MOVE ALL OF THIS BLOCK PLUS THE ALLOCATABLE BLOCK ABOVE TO BEFORE THE TILE LOOP
+   ! Npoints, Ncolums DON'T NEED THE TILE DIMENSION CALCULATION
+   ! WHAT ABOUT Nlevels? THIS DOES NEED KTS:KTE??? !!! BUT !!! kts, kte ARE NOT SPECIFIED IN THE TILE CALCULATION!
+   ! SO HOW DO WE KNOW WHAT THEY ARE ANYWAY?
+   ! HMMMMM..........
+   allocate(COSP_CLLCALIPSO(ims:ime,jms:jme), COSP_CLMCALIPSO(ims:ime,jms:jme),     &
+            COSP_CLHCALIPSO(ims:ime,jms:jme), COSP_CLTCALIPSO(ims:ime,jms:jme),     &
+            COSP_CLTLIDARRADAR(ims:ime,jms:jme), COSP_CLTISCCP(ims:ime,jms:jme),    &
+            COSP_PCTISCCP(ims:ime,jms:jme), COSP_TAUISCCP(ims:ime,jms:jme),         &
+            COSP_ALBISCCP(ims:ime,jms:jme), COSP_MEANTBCLRISCCP(ims:ime,jms:jme),   &
+            COSP_MEANTBISCCP(ims:ime,jms:jme), COSP_CLTMODIS(ims:ime,jms:jme),      &
+            COSP_CLWMODIS(ims:ime,jms:jme), COSP_CLIMODIS(ims:ime,jms:jme),         &
+            COSP_CLHMODIS(ims:ime,jms:jme), COSP_CLMMODIS(ims:ime,jms:jme),         &
+            COSP_CLLMODIS(ims:ime,jms:jme), COSP_TAUTMODIS(ims:ime,jms:jme),        &
+            COSP_TAUWMODIS(ims:ime,jms:jme), COSP_TAUIMODIS(ims:ime,jms:jme),       &
+            COSP_TAUTLOGMODIS(ims:ime,jms:jme), COSP_TAUWLOGMODIS(ims:ime,jms:jme), &
+            COSP_TAUILOGMODIS(ims:ime,jms:jme), COSP_REFFCLWMODIS(ims:ime,jms:jme), &
+            COSP_REFFCLIMODIS(ims:ime,jms:jme), COSP_PCTMODIS(ims:ime,jms:jme),     &
+            COSP_LWPMODIS(ims:ime,jms:jme), COSP_IWPMODIS(ims:ime,jms:jme),         &
+            COSP_TOFFSET(ims:ime,jms:jme), COSP_BOXTAUISCCP(ims:ime,jms:jme),       &
+            COSP_BOXTOPISCCP(ims:ime,jms:jme)                                       )
 
-   ! TODO: remove the local variables that we don't actually use!
+   ! Allocate 3D spatial output arrays (some are Nlr, some are Npoints)
+   allocate(COSP_CLCALIPSO(ims:ime,Nlr,jme:jme), COSP_CLCALIPSO2(ims:ime,Nlr,jme:jme),  &
+            COSP_LIDARBETAMOL532(ims:ime,Nlevels,jme:jme),                              &
+            COSP_DBZE94(ims:ime,Nlevels,jme:jme), COSP_ATB532(ims:ime,Nlevels,jme:jme), &
+            COSP_FRACOUT(ims:ime,Nlevels,jme:jme)                                       )
+                    
+   ! Allocate arrays that contain non-spatial dimensions
+   #ifdef RTTOV
+      allocate(COSP_TBRTTOV(ims:ime,jms:jme,Nchannels))
+   #endif
+
+   allocate(COSP_PARASOLREFL(ims:ime,jms:jme,PARASOL_NREFL),  &
+            COSP_CFADDBZE94(ims:ime,Nlr,jme:jme,DBZE_BINS),   &
+            COSP_CFADLIDARSR532(ims:ime,Nlr,jme:jme,SR_BINS), &
+            COSP_CLISCCP(ims:ime,jms:jme,7,7),                &
+            COSP_CLMODIS(ims:ime,jms:jme,7,7),                &
+            COSP_CLMISR(ims:ime,jms:jme,7,MISR_N_CTH)         )
+
+
+   ! Initialise the output arrays
+   CLLCALIPSO(ims:ime,jms:jme) = 0.
+   CLMCALIPSO(ims:ime,jms:jme) = 0.
+   CLHCALIPSO(ims:ime,jms:jme) = 0.
+   CLTCALIPSO(ims:ime,jms:jme) = 0.
+   CLTLIDARRADAR(ims:ime,jms:jme) = 0.
+   CLTISCCP(ims:ime,jms:jme) = 0.
+   PCTISCCP(ims:ime,jms:jme) = 0.
+   TAUISCCP(ims:ime,jms:jme) = 0.
+   ALBISCCP(ims:ime,jms:jme) = 0.
+   MEANTBCLRISCCP(ims:ime,jms:jme) = 0.
+   MEANTBISCCP(ims:ime,jms:jme) = 0.
+   CLTMODIS(ims:ime,jms:jme) = 0.
+   CLWMODIS(ims:ime,jms:jme) = 0.
+   CLIMODIS(ims:ime,jms:jme) = 0.
+   CLHMODIS(ims:ime,jms:jme) = 0.
+   CLMMODIS(ims:ime,jms:jme) = 0.
+   CLLMODIS(ims:ime,jms:jme) = 0.
+   TAUTMODIS(ims:ime,jms:jme) = 0.
+   TAUWMODIS(ims:ime,jms:jme) = 0.
+   TAUIMODIS(ims:ime,jms:jme) = 0.
+   TAUTLOGMODIS(ims:ime,jms:jme) = 0.
+   TAUWLOGMODIS(ims:ime,jms:jme) = 0.
+   TAUILOGMODIS(ims:ime,jms:jme) = 0.
+   REFFCLWMODIS(ims:ime,jms:jme) = 0.
+   REFFCLIMODIS(ims:ime,jms:jme) = 0.
+   PCTMODIS(ims:ime,jms:jme) = 0.
+   LWPMODIS(ims:ime,jms:jme) = 0.
+   IWPMODIS(ims:ime,jms:jme) = 0.
+   TOFFSET(ims:ime,jms:jme) = 0.
+   BOXTAUISCCP(ims:ime,jms:jme) = 0.
+   BOXTOPISCCP(ims:ime,jms:jme) = 0.
+   CLCALIPSO(ims:ime,1:Nlr,jme:jme) = 0.
+   CLCALIPSO2(ims:ime,1:Nlr,jme:jme) = 0.
+   LIDARBETAMOL532(ims:ime,1:Nlevels,jme:jme) = 0.
+   LIDARBETAMOL532(ims:ime,1:Nlevels,jme:jme) = 0.
+   PARASOLREFL(ims:ime,jms:jme,1:PARASOL_NREFL) = 0.
+   #ifdef RTTOV
+   TBRTTOV(ims:ime,jms:jme,1:Nchannels) = 0.
+   #endif
+   DBZE94(ims:ime,1:Nlevels,jme:jme) = 0.
+   ATB532(ims:ime,1:Nlevels,jme:jme) = 0.
+   FRACOUT(ims:ime,1:Nlevels,jme:jme) = 0.
+   CFADDBZE94(ims:ime,1:Nlr,jme:jme,1:DBZE_BINS) = 0.
+   CFADLIDARSR532(ims:ime,1:Nlr,jme:jme,1:SR_BINS) = 0.
+   CLISCCP(ims:ime,jms:jme,1:7,1:7) = 0.
+   CLMODIS(ims:ime,jms:jme,1:7,1:7) = 0.
+   CLMISR(ims:ime,jms:jme,1:7,1:MISR_N_CTH) = 0.
+
+
+   ! TODO: remove any local input variables that we don't actually use!
 
    !---------- 4. SET FLAGS --------------------------------------------------------------------------------------------
    ! OVERWRITE THE OUTPUT FLAGS ACCORDING TO WHICH SIMULATORS ARE TO BE RUN:
@@ -662,7 +800,6 @@
          ! INITIALISE REFF
          Reff(1:Npoints, 1:Nlevels, 1:N_Hydro) = 0.
 
-
          ! CALCULATE COLUMN PROFILES THAT AREN'T NATIVE TO WRF:
          do k = 1, Nlevels     ! k loop (vertical)
              ! full pressure field
@@ -830,91 +967,104 @@
 
         ! TRANSFER COSP OUTPUT TO WRF VARIABLES (following cosp_io.F90)
         ! TODO: Do we need local & global vars for these? (CHECK ERADC IMPLEMENTATION)
-        ! TODO: CHECK WHICH ARE ON NLR AND WHICH ARE ON NLEVELS!
+        ! NEED TO BE CAREFUL WITH DIMENSIONS HERE! Lots of arrays are multi-dimensional so for writing COSP output
+        ! we have to make sure we have added the correct dimensions to registry.dimspec, then specified the size of 
+        ! the output array in the relevant Registry file, as well as taking care of the dimensions locally.
 
         ! 2D VARIABLES (i,j)
-        CLLCALIPSO(i,j) = stlidar%cldlayer(:,1) ! CALIPSO low level cloud fraction (profile)
-        CLMCALIPSO(i,j) = stlidar%cldlayer(:,2) ! CALIPSO mid level cloud fraction (profile)
-        CLHCALIPSO(i,j) = stlidar%cldlayer(:,3) ! CALIPSO high level cloud fraction (profile)
-        CLTCALIPSO(i,j) = stlidar%cldlayer(:,4) ! CALIPSO total cloud fraction (profile)
-        CLTLIDARRADAR(i,j) = stradar%radar_lidar_tcc ! Lidar and radar total cloud fraction
-        CLTISCCP(i,j) = isccp%totalcldarea ! ISCCP total cloud fraction
-        PCTISCCP(i,j) = isccp%meanptop ! ISCCP mean cloud top pressure
-        TAUISCCP(i,j) = isccp%meantaucld ! ISCCP mean optical depth
-        ALBISCCP(i,j) = isccp%meanalbedocld ! ISCCP mean cloud albedo
-        MEANTBCLRISCCP(i,j) = isccp%meantbclr ! ISCCP mean clear-sky brightness temp
-        MEANTBISCCP(i,j) = isccp%meantb ! ISCCP mean all-sky brightness temp
-        CLTMODIS(i,j) = modis%Cloud_Fraction_Total_Mean ! MODIS total cloud fraction
-        CLWMODIS(i,j) = modis%Cloud_Fraction_Water_Mean ! MODIS liquid cloud fraction
-        CLIMODIS(i,j) = modis%Cloud_Fraction_Ice_Mean ! MODIS ice cloud fraction
-        CLHMODIS(i,j) = modis%Cloud_Fraction_High_Mean ! MODIS high level cloud fraction
-        CLMMODIS(i,j) = modis%Cloud_Fraction_Mid_Mean ! MODIS mid level loud fraction
-        CLLMODIS(i,j) = modis%Cloud_Fraction_Low_Mean ! MODIS low level cloud fraction
-        TAUTMODIS(i,j) = modis%Optical_Thickness_Total_Mean ! MODIS total cloud optical thickness
-        TAUWMODIS(i,j) = modis%Optical_Thickness_Water_Mean ! MODIS liquid cloud optical thickness
-        TAUIMODIS(i,j) = modis%Optical_Thickness_Ice_Mean ! MODIS ice cloud optical thickness
-        TAUTLOGMODIS(i,j) = modis%Optical_Thickness_Total_LogMean ! MODIS total cloud optical thickness (log10 mean)
-        TAUWLOGMODIS(i,j) = modis%Optical_Thickness_Water_LogMean ! MODIS liquid cloud optical thickness (log10 mean)
-        TAUILOGMODIS(i,j) = modis%Optical_Thickness_Ice_LogMean ! MODIS ice cloud optical thickness (log10 mean)
-        REFFCLWMODIS(i,j) = modis%Cloud_Particle_Size_Water_Mean ! MODIS liquid cloud particle size
-        REFFCLIMODIS(i,j) = modis%Cloud_Particle_Size_Ice_Mean ! MODIS ice cloud particle size
-        PCTMODIS(i,j) = modis%Cloud_Top_Pressure_Total_Mean ! MODIS cloud top pressure
-        LWPMODIS(i,j) = modis%Liquid_Water_Path_Mean ! MODIS cloud liquid water path
-        IWPMODIS(i,j) = modis%Ice_Water_Path_Mean ! MODIS cloud ice water path
-        TOFFSET(i,j) = gbx%toffset ! time difference
+        COSP_CLLCALIPSO(i,j) = stlidar%cldlayer(:,1) ! CALIPSO low level cloud fraction (profile)
+        COSP_CLMCALIPSO(i,j) = stlidar%cldlayer(:,2) ! CALIPSO mid level cloud fraction (profile)
+        COSP_CLHCALIPSO(i,j) = stlidar%cldlayer(:,3) ! CALIPSO high level cloud fraction (profile)
+        COSP_CLTCALIPSO(i,j) = stlidar%cldlayer(:,4) ! CALIPSO total cloud fraction (profile)
+        COSP_CLTLIDARRADAR(i,j) = stradar%radar_lidar_tcc ! Lidar and radar total cloud fraction
+        COSP_CLTISCCP(i,j) = isccp%totalcldarea ! ISCCP total cloud fraction
+        COSP_PCTISCCP(i,j) = isccp%meanptop ! ISCCP mean cloud top pressure
+        COSP_TAUISCCP(i,j) = isccp%meantaucld ! ISCCP mean optical depth
+        COSP_ALBISCCP(i,j) = isccp%meanalbedocld ! ISCCP mean cloud albedo
+        COSP_MEANTBCLRISCCP(i,j) = isccp%meantbclr ! ISCCP mean clear-sky brightness temp
+        COSP_MEANTBISCCP(i,j) = isccp%meantb ! ISCCP mean all-sky brightness temp
+        COSP_CLTMODIS(i,j) = modis%Cloud_Fraction_Total_Mean ! MODIS total cloud fraction
+        COSP_CLWMODIS(i,j) = modis%Cloud_Fraction_Water_Mean ! MODIS liquid cloud fraction
+        COSP_CLIMODIS(i,j) = modis%Cloud_Fraction_Ice_Mean ! MODIS ice cloud fraction
+        COSP_CLHMODIS(i,j) = modis%Cloud_Fraction_High_Mean ! MODIS high level cloud fraction
+        COSP_CLMMODIS(i,j) = modis%Cloud_Fraction_Mid_Mean ! MODIS mid level loud fraction
+        COSP_CLLMODIS(i,j) = modis%Cloud_Fraction_Low_Mean ! MODIS low level cloud fraction
+        COSP_TAUTMODIS(i,j) = modis%Optical_Thickness_Total_Mean ! MODIS total cloud optical thickness
+        COSP_TAUWMODIS(i,j) = modis%Optical_Thickness_Water_Mean ! MODIS liquid cloud optical thickness
+        COSP_TAUIMODIS(i,j) = modis%Optical_Thickness_Ice_Mean ! MODIS ice cloud optical thickness
+        COSP_TAUTLOGMODIS(i,j) = modis%Optical_Thickness_Total_LogMean ! MODIS total cloud optical thickness (log10 mean)
+        COSP_TAUWLOGMODIS(i,j) = modis%Optical_Thickness_Water_LogMean ! MODIS liquid cloud optical thickness (log10 mean)
+        COSP_TAUILOGMODIS(i,j) = modis%Optical_Thickness_Ice_LogMean ! MODIS ice cloud optical thickness (log10 mean)
+        COSP_REFFCLWMODIS(i,j) = modis%Cloud_Particle_Size_Water_Mean ! MODIS liquid cloud particle size
+        COSP_REFFCLIMODIS(i,j) = modis%Cloud_Particle_Size_Ice_Mean ! MODIS ice cloud particle size
+        COSP_PCTMODIS(i,j) = modis%Cloud_Top_Pressure_Total_Mean ! MODIS cloud top pressure
+        COSP_LWPMODIS(i,j) = modis%Liquid_Water_Path_Mean ! MODIS cloud liquid water path
+        COSP_IWPMODIS(i,j) = modis%Ice_Water_Path_Mean ! MODIS cloud ice water path
+        COSP_TOFFSET(i,j) = gbx%toffset ! time difference
+        ! These are 2D variables because we use Ncolumns = 1 for WRF implementation:
+        COSP_BOXTAUISCCP(i,j) = isccp%boxtau ! Optical depth in each column as calculated by ISCCP simulator
+        COSP_BOXTOPISCCP(i,j) = isccp%boxptop ! Cloud top pressure in each column as calculated by ISCCP simulator
 
-        ! 3D variables (i,k,j)
-        ! TODO - DIMS? Are these Nlevels or Nlr? Or different for each? And is it kms:kme here?
-        ! registry.dimspec: ks = 40 (constant, 40 = number of levels in statistical output)
-        CLCALIPSO(i,kms:kme,j) = stlidar%lidarcld ! CALIPSO cloud area fraction
-        CLCALIPSO2(i,kms:kme,j) = stradar%lidar_only_freq_cloud ! CALIPSO cloud fraction undetected by CloudSat
-        LIDARBETAMOL532(i,kms:kme,j) = sglidar%beta_mol ! Lidar molecular backscatter (532 nm)
-        BOXTAUISCCP(i,kms:kme,j) = isccp%boxtau ! Optical depth in each column as calculated by ISCCP simulator
-        BOXTOPISCCP(i,kms:kme,j) = isccp%boxptop ! Cloud top pressure in each column as calculated by ISCCP simulator
+        ! 3D variables: some are on stat grid i.e. (i,l,j)
+        ! registry.dimspec: Nlr = 40 (= number of levels in statistical output)
+        COSP_CLCALIPSO(i,1:Nlr,j) = stlidar%lidarcld ! CALIPSO cloud area fraction
+        COSP_CLCALIPSO2(i,1:Nlr,j) = stradar%lidar_only_freq_cloud ! CALIPSO cloud fraction undetected by CloudSat
+        ! LIDARBETAMOL532 is on model grid i.e. (i,k,j)
+        COSP_LIDARBETAMOL532(i,1:Nlevels,j) = sglidar%beta_mol ! Lidar molecular backscatter (532 nm)
+        
+        ! dims of PARASOLREFL(i,j,p)
+        COSP_PARASOLREFL(i,j,1:Nrefl) = stlidar%parasolrefl ! PARASOL reflectance         
 
-        ! TODO: sort out dimensions of PARASOLREFL in WRF output: is (i, j, Nrefl) - can we accommodate this?
-        ! dims of PARASOLREFL(i,j,pr); do (i,j,i:Nrefl)
-        !PARASOLREFL(i,j,Nrefl) = stlidar%parasolrefl ! PARASOL reflectance
-
+        ! dims of TBRTTOV(i,j,n)
         #ifdef RTTOV
-           TBRTTOV(i,kms:kme,j) = rttov%tbs ! Mean clear-sky brightness temp as calculated by RRTOV
+           COSP_TBRTTOV(i,j,1:Nchannels) = rttov%tbs ! Mean clear-sky brightness temp as calculated by RRTOV
         #endif
 
-        ! 4D variables are actually 3D: 
-        ! (Npoints, Ncolumns, Nlevels) = (i,k,j) because we have Ncolumns = 1 for WRF implementation...
-        DBZE94(i,kms:kme,j) = sgradar%Ze_tot ! CloudSat radar reflectivity
-        ATB532(i,kms:kme,j) = sglidar%beta_tot ! Lidar attenuated total backscatter (532 nm)
-        FRACOUT(i,kms:kme,j) = sg%frac_out ! Subcolumn output from SCOPS
+        ! 4D variables are actually 3D: (Npoints, Ncolumns, Nlevels) = (i,k,j) because we have Ncolumns = 1 for WRF implementation...
+        ! The following arrays are on model levels (1:Nlevels) not the statistical grid (Nlr = 40)
+        COSP_DBZE94(i,1:Nlevels,j) = sgradar%Ze_tot ! CloudSat radar reflectivity
+        COSP_ATB532(i,1:Nlevels,j) = sglidar%beta_tot ! Lidar attenuated total backscatter (532 nm)
+        COSP_FRACOUT(i,1:Nlevels,j) = sg%frac_out ! Subcolumn output from SCOPS
+        ! The following have non-spatial 4th (and some 3rd) dimensions:
+        ! CFADDBZE94(i,l,j,b); DBZE_BINS is read in from cosp_constants
+        COSP_CFADDBZE94(i,1:Nlr,j,1:DBZE_BINS) = stradar%cfad_ze
+        ! CFADLIDARSR532: (i,l,j,s); SR_BINS is read in from cosp_constants
+        COSP_CFADLIDARSR532(i,1:Nlr,j,1:SR_BINS) = stlidar%cfad_sr ! CALIPSO scattering ratio CFAD
+        ! CLISCCP and CLMODIS: CLISCCP(i,j,d,e); CLMODIS(i,j,da,db)
+        COSP_CLISCCP(i,j,1:7,1:7) = isccp%fq_isccp ! ISCCP cloud area fraction
+        COSP_CLMODIS(i,j,1:7,1:7) = modis%Optical_Thickness_vs_Cloud_Top_Pressure ! MODIS cloud area fraction"
+        !CLMISR(i,j,d,m)
+        COSP_CLMISR(i,j,1:7,1:MISR_N_CTH) = misr%fq_MISR ! MISR cloud fraction
 
-        ! TODO: sort out dimensions of CFADDBZE94: (Npoint, DBZE_BINS, Nlvgrid) - extra bins, Nlevels = subgrid levels not WRF levels?
-        ! CFADDBZE94(i,j,ks,db)
-        !CFADDBZE94(i,1:Nlvgrid,j,DBZE_BINS) = stradar%cfad_ze
-        ! TODO: sort out dimensions of CFADLIDARSR532: (Npoints, SR_BINS Nlvgrid) - extra bins, Nlevels = subgrid levels not WRF levels?
-        !CFADLIDARSR532(i,j,ks,db)
-        !CFADLIDARSR532(i,1:Nlvgrid,j,SR_BINS) = stlidar%cfad_sr ! CALIPSO scattering ratio CFAD
-        ! TODO: sort out dims of CLISCCP and CLMODIS: (Npoints, 7,7)
-        !CLISCCP(i,j,da,db); CLMODIS(i,j,da,db)
-        !CLISCCP(i,j,1:7,1:7) = isccp%fq_isccp ! ISCCP cloud area fraction
-        !CLMODIS(i,j,1:7,1:7) = modis%Optical_Thickness_vs_Cloud_Top_Pressure ! MODIS cloud area fraction"
-        ! TODO: sort out dims of CLMISR: (Npoints, 7, MISR_N_CTH)
-        !CLMISR(i,j,d,mc)
-        !CLMISR(i,j,1:7,1:MISR_N_CTH) = misr%fq_MISR ! MISR cloud fraction
-
-
-        ! TODO: DEALLOCATE MEMORY IN DERIVED TYPES
 
       end if ! only run COSP if gridbox is sunlit TODO: THIS ONLY APPLIES FOR SOME OF THE SIMULATORS! SEE CAM IMPLEMENTATION
+
+        ! DEALLOCATE MEMORY IN DERIVED TYPES: free_cosp_X is accessed from cosp_types, this is within the i,j loop
+        call free_cosp_gridbox(gbx)
+        call free_cosp_vgrid(vgrid)
+        call free_cosp_subgrid(sgx)
+        call free_cosp_sgradar(sgradar)
+        call free_cosp_radarstats(stradar)
+        call free_cosp_sglidar(sglidar)
+        call free_cosp_lidarstats(stlidar)
+        call free_cosp_isccp(isccp)
+        call free_cosp_misr(misr)
+        call free_cosp_modis(modis)
+
 
       end do ! i-point loop
       end do ! j-point loop
 
       ! TESTING WRITING TO NEW VARIABLES!!!
-      eradc(ims:ime, kms:kme, jms:jme)=-15
-      eradi(ims:ime, kms:kme, jms:jme)=-15
-      erads(ims:ime, kms:kme, jms:jme)=-15
-      eradr(ims:ime, kms:kme, jms:jme)=-15
-      eradg(ims:ime, kms:kme, jms:jme)=-15
-      cldfra(ims:ime, kms:kme, jms:jme)=-15
+      ! eradc(ims:ime, kms:kme, jms:jme)=-15
+      ! eradi(ims:ime, kms:kme, jms:jme)=-15
+      ! erads(ims:ime, kms:kme, jms:jme)=-15
+      ! eradr(ims:ime, kms:kme, jms:jme)=-15
+      ! eradg(ims:ime, kms:kme, jms:jme)=-15
+      ! cldfra(ims:ime, kms:kme, jms:jme)=-15
+
+      ! TODO: deallocate arrays before looping over the next tile
+
 
      END DO ! tiles loop
    end subroutine wrf_cosp_simulator
