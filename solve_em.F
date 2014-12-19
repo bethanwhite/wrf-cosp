@@ -4068,7 +4068,7 @@ BENCH_END(bc_2d_tim)
       &             ,CHANNEL_SWITCH=channel_bdy                            &
       &             ,DT=grid%dt, CURR_SECS=curr_secs                       &
       &             ,COSP_CLLCALIPSO=grid%COSP_CLLCALIPSO                  &
-      &             ,COSP_CLMCALIPSO                                       &
+      &             ,COSP_CLMCALIPSO=grid%COSP_CLMCALIPSO                  &
       &             ,COSP_CLHCALIPSO=grid%COSP_CLHCALIPSO                  &
       &             ,COSP_CLTCALIPSO=grid%COSP_CLTCALIPSO                  &
       &             ,COSP_CLTLIDARRADAR=grid%COSP_CLTLIDARRADAR            &
@@ -4101,9 +4101,8 @@ BENCH_END(bc_2d_tim)
       &             ,COSP_CLCALIPSO=grid%COSP_CLCALIPSO                    &
       &             ,COSP_CLCALIPSO2=grid%COSP_CLCALIPSO2                  &
       &             ,COSP_LIDARBETAMOL532=grid%COSP_LIDARBETAMOL532        &
-      &             ,COSP_LIDARBETAMOL532=grid%COSP_LIDARBETAMOL532        &
       &             ,COSP_PARASOLREFL=grid%COSP_PARASOLREFL                &
-      &             ,COSP_TBRTTOV=grid%COSP_TBRTTOV                        &
+!      &             ,COSP_TBRTTOV=grid%COSP_TBRTTOV                        &
       &             ,COSP_DBZE94=grid%COSP_DBZE94                          &
       &             ,COSP_ATB532=grid%COSP_ATB532                          &
       &             ,COSP_FRACOUT=grid%COSP_FRACOUT                        &
@@ -4111,7 +4110,7 @@ BENCH_END(bc_2d_tim)
       &             ,COSP_CFADLIDARSR532=grid%COSP_CFADLIDARSR532          &
       &             ,COSP_CLISCCP=grid%COSP_CLISCCP                        &
       &             ,COSP_CLMODIS=grid%COSP_CLMODIS                        &
-      &             ,COSP_CLMISR=grid%COSP_CLMISR                          )
+      &             ,COSP_CLMISR=grid%COSP_CLMISR  )
 
 
 
